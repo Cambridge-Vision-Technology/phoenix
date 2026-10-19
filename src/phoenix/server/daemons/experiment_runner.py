@@ -105,7 +105,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from strawberry.relay import GlobalID
 from typing_extensions import TypeAlias, override
 
-from phoenix.config import EXPERIMENT_STALE_CLAIM_TIMEOUT
+from phoenix.config import (
+    DEFAULT_EXPERIMENT_TASK_TIMEOUT_SECONDS,
+    EXPERIMENT_STALE_CLAIM_TIMEOUT,
+    get_env_experiment_task_timeout_seconds,
+)
 from phoenix.db import models
 from phoenix.db.helpers import (
     SupportedSQLDialect,
@@ -399,7 +403,7 @@ class TaskWorkItem(WorkItem):
         project_id: int,
         # Optional parameters with defaults
         credentials: Sequence[GenerativeCredentialInput] | None = None,
-        timeout: float = 120.0,
+        timeout: float = DEFAULT_EXPERIMENT_TASK_TIMEOUT_SECONDS,
         retry_count: int = 0,
     ) -> None:
         # Owner (private; base class and _run_and_release use _running_experiment)
@@ -1745,6 +1749,7 @@ class RunningExperiment:
             tracer_factory=self._tracer_factory,
             project_id=project_id,
             credentials=self._credentials,
+            timeout=get_env_experiment_task_timeout_seconds(),
         )
 
     def _create_eval_work_item(

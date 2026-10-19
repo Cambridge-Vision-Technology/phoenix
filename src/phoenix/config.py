@@ -878,6 +878,14 @@ ENV_PHOENIX_PLAYGROUND_TIMEOUT_SECONDS = "PHOENIX_PLAYGROUND_TIMEOUT_SECONDS"
 """
 The timeout in seconds for individual playground task runs.
 """
+ENV_PHOENIX_EXPERIMENT_TASK_TIMEOUT_SECONDS = "PHOENIX_EXPERIMENT_TASK_TIMEOUT_SECONDS"
+"""
+The timeout in seconds for individual experiment prompt-task attempts.
+"""
+ENV_PHOENIX_OPENAI_CLIENT_TIMEOUT_SECONDS = "PHOENIX_OPENAI_CLIENT_TIMEOUT_SECONDS"
+"""
+The HTTP timeout in seconds for the built-in OpenAI provider client.
+"""
 
 ENV_PHOENIX_ALLOWED_SANDBOX_PROVIDERS = "PHOENIX_ALLOWED_SANDBOX_PROVIDERS"
 """
@@ -1069,6 +1077,8 @@ def get_env_default_retention_policy_days() -> int:
 
 
 DEFAULT_PLAYGROUND_TIMEOUT_SECONDS = 90
+DEFAULT_EXPERIMENT_TASK_TIMEOUT_SECONDS = 120
+DEFAULT_OPENAI_CLIENT_TIMEOUT_SECONDS = 30
 
 
 def get_env_playground_timeout_seconds() -> int:
@@ -1084,6 +1094,26 @@ def get_env_playground_timeout_seconds() -> int:
     seconds = _int_val(ENV_PHOENIX_PLAYGROUND_TIMEOUT_SECONDS, DEFAULT_PLAYGROUND_TIMEOUT_SECONDS)
     if seconds <= 0:
         raise ValueError("PHOENIX_PLAYGROUND_TIMEOUT_SECONDS must be positive")
+    return seconds
+
+
+def get_env_experiment_task_timeout_seconds() -> int:
+    """Return the experiment prompt-task timeout in seconds, defaulting to 120."""
+    seconds = _int_val(
+        ENV_PHOENIX_EXPERIMENT_TASK_TIMEOUT_SECONDS, DEFAULT_EXPERIMENT_TASK_TIMEOUT_SECONDS
+    )
+    if seconds <= 0:
+        raise ValueError("PHOENIX_EXPERIMENT_TASK_TIMEOUT_SECONDS must be positive")
+    return seconds
+
+
+def get_env_openai_client_timeout_seconds() -> int:
+    """Return the built-in OpenAI HTTP timeout in seconds, defaulting to 30."""
+    seconds = _int_val(
+        ENV_PHOENIX_OPENAI_CLIENT_TIMEOUT_SECONDS, DEFAULT_OPENAI_CLIENT_TIMEOUT_SECONDS
+    )
+    if seconds <= 0:
+        raise ValueError("PHOENIX_OPENAI_CLIENT_TIMEOUT_SECONDS must be positive")
     return seconds
 
 
