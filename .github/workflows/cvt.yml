@@ -6,6 +6,11 @@ on:
   push:
     branches: [cvt]
   workflow_dispatch:
+    inputs:
+      publish_candidate:
+        description: Publish a candidate image from the selected revision
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -76,7 +81,8 @@ jobs:
         id: image
         env:
           REVISION: ${{ github.sha }}
-        run: echo "tag=ghcr.io/cambridge-vision-technology/phoenix:20.23.0-cvt.${REVISION:0:12}" >> "$GITHUB_OUTPUT"
+          TAG_PREFIX: ${{ github.event_name == 'workflow_dispatch' && '20.23.0-cvt.candidate' || '20.23.0-cvt' }}
+        run: echo "tag=ghcr.io/cambridge-vision-technology/phoenix:${TAG_PREFIX}.${REVISION:0:12}" >> "$GITHUB_OUTPUT"
       - name: Build patched nonroot image
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
@@ -106,14 +112,14 @@ jobs:
         if: always()
         run: docker logs phoenix
       - name: Log in to GHCR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/cvt'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/cvt') || (github.event_name == 'workflow_dispatch' && inputs.publish_candidate)
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish tested image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/cvt'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/cvt') || (github.event_name == 'workflow_dispatch' && inputs.publish_candidate)
         env:
           IMAGE: ${{ steps.image.outputs.tag }}
         run: docker push "$IMAGE"
