@@ -147,6 +147,21 @@ def _make_running_experiment(
     )
 
 
+@pytest.mark.parametrize("seconds", [1, 900])
+def test_created_task_work_item_uses_configured_timeout(
+    monkeypatch: pytest.MonkeyPatch, seconds: int
+) -> None:
+    monkeypatch.setenv("PHOENIX_EXPERIMENT_TASK_TIMEOUT_SECONDS", str(seconds))
+    exp = _make_running_experiment()
+    item = exp._create_task_work_item(
+        dataset_example_revision=_make_dataset_example_revision(),
+        repetition_number=1,
+        prompt_task=MagicMock(spec=models.ExperimentPromptTask),
+        project_id=1,
+    )
+    assert item._timeout == seconds
+
+
 class _StubLLMClient:
     """LLM client stub that provides a hashable rate limit key."""
 
