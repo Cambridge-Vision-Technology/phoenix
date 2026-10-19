@@ -16,6 +16,8 @@ from phoenix.config import (
     get_env_admins,
     get_env_auth_settings,
     get_env_database_schema,
+    get_env_experiment_task_timeout_seconds,
+    get_env_openai_client_timeout_seconds,
     get_env_phoenix_admin_secret,
     get_env_playground_timeout_seconds,
     get_env_postgres_azure_scope,
@@ -53,6 +55,39 @@ class TestGetEnvPlaygroundTimeoutSeconds:
         monkeypatch.setenv("PHOENIX_PLAYGROUND_TIMEOUT_SECONDS", "not-a-number")
         with pytest.raises(ValueError, match="PHOENIX_PLAYGROUND_TIMEOUT_SECONDS"):
             get_env_playground_timeout_seconds()
+
+
+@pytest.mark.parametrize(
+    ("env_var", "getter", "default"),
+    [
+        (
+            "PHOENIX_EXPERIMENT_TASK_TIMEOUT_SECONDS",
+            get_env_experiment_task_timeout_seconds,
+            120,
+        ),
+        ("PHOENIX_OPENAI_CLIENT_TIMEOUT_SECONDS", get_env_openai_client_timeout_seconds, 30),
+    ],
+)
+class TestGetEnvProviderTimeoutSeconds:
+    def test_default_when_unset(
+        self, monkeypatch: pytest.MonkeyPatch, env_var: str, getter: Any, default: int
+    ) -> None:
+        monkeypatch.delenv(env_var, raising=False)
+        assert getter() == default
+
+    def test_custom_value(
+        self, monkeypatch: pytest.MonkeyPatch, env_var: str, getter: Any, default: int
+    ) -> None:
+        monkeypatch.setenv(env_var, "900")
+        assert getter() == 900
+
+    @pytest.mark.parametrize("value", ["0", "-5", "not-a-number", "1.5", "nan", "inf", ""])
+    def test_invalid_value_raises(
+        self, monkeypatch: pytest.MonkeyPatch, env_var: str, getter: Any, default: int, value: str
+    ) -> None:
+        monkeypatch.setenv(env_var, value)
+        with pytest.raises(ValueError, match=env_var):
+            getter()
 
 
 class TestPostgresConnectionString:
