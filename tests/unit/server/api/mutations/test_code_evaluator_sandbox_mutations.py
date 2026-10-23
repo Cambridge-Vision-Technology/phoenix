@@ -816,6 +816,27 @@ class TestCodeEvaluatorSandboxMutationIds:
         assert row is not None
         assert row.sandbox_config_id == sandbox_config.id
 
+        persisted = await gql_client.execute(
+            """
+            query($id: ID!) {
+                node(id: $id) {
+                    ... on CodeEvaluator {
+                        outputConfigs {
+                            ... on ContinuousAnnotationConfig {
+                                name optimizationDirection lowerBound upperBound
+                            }
+                        }
+                    }
+                }
+            }
+            """,
+            variables={"id": evaluator["id"]},
+        )
+        assert persisted.data and not persisted.errors
+        assert persisted.data["node"]["outputConfigs"] == [
+            {"name": "score", "optimizationDirection": "NONE", "lowerBound": 0, "upperBound": 1}
+        ]
+
     async def test_create_code_evaluator_rejects_disabled_sandbox_config(
         self,
         gql_client: AsyncGraphQLClient,
