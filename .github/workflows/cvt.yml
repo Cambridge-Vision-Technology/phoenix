@@ -51,7 +51,7 @@ jobs:
         # version: tests compare the vendored request types with that package.
         run: |
           uv venv .venv-unit --python 3.11
-          uv pip install --python .venv-unit/bin/python --strict -r requirements/unit-tests.txt pydantic-ai-slim==2.55.0
+          uv pip install --python .venv-unit/bin/python --strict -r requirements/unit-tests.txt pydantic-ai-slim==2.57.0
           uv pip install --python .venv-unit/bin/python --strict ./packages/phoenix-evals
           uv pip install --python .venv-unit/bin/python --strict --no-sources .
           uv pip install --python .venv-unit/bin/python --strict --no-sources ./evals/harbor/verifiers
@@ -81,7 +81,7 @@ jobs:
         id: image
         env:
           REVISION: ${{ github.sha }}
-          TAG_PREFIX: ${{ github.event_name == 'workflow_dispatch' && '20.23.0-cvt.candidate' || '20.23.0-cvt' }}
+          TAG_PREFIX: ${{ github.event_name == 'workflow_dispatch' && '20.25.0-cvt.candidate' || '20.25.0-cvt' }}
         run: echo "tag=ghcr.io/cambridge-vision-technology/phoenix:${TAG_PREFIX}.${REVISION:0:12}" >> "$GITHUB_OUTPUT"
       - name: Build patched nonroot image
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
@@ -98,7 +98,7 @@ jobs:
             BASE_IMAGE=gcr.io/distroless/python3-debian13:nonroot@sha256:f47f5807043391605425f2bd162b25f50cebdc90640bacc804e0177608fe5c65
             UV_IMAGE=ghcr.io/astral-sh/uv:0.12.19-python3.13-trixie-slim@sha256:aba5f865793af9275ceaa06d30935dfc6db8b81969c9fb099b0ebca6396b189e
           build-contexts: |
-            node:24-slim=docker-image://docker.io/library/node:24-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5
+            node:24-slim=docker-image://docker.io/library/node:24-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205
             denoland/deno:bin-2.1.4=docker-image://docker.io/denoland/deno:bin-2.1.4@sha256:1cc7ab514b88a615cde5acf4a6db0baa7dd27fdc9476cf3f4e0671f4cfce29aa
           cache-from: type=gha,scope=cvt-amd64
           cache-to: type=gha,scope=cvt-amd64,mode=max
