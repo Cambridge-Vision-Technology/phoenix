@@ -822,13 +822,13 @@ export function ExperimentsTable({
             <Flex direction="row" gap="size-100">
               {project?.id ? (
                 <LinkButton
-                  to={`/projects/${project?.id}`}
+                  to={`/datasets/${data.id}/compare?experimentId=${row.original.id}&view=list`}
                   leadingVisual={<Icon svg={<Icons.Trace />} />}
                   size="S"
-                  aria-label="View traces"
+                  aria-label="View runs and linked traces"
                   isDisabled={!project?.id}
                 >
-                  Traces
+                  Runs &amp; traces
                 </LinkButton>
               ) : null}
               <DownloadExperimentActionMenu experimentId={row.original.id} />
