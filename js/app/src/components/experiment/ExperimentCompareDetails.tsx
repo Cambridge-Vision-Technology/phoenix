@@ -140,6 +140,7 @@ export function ExperimentCompareDetails({
                         name
                         label
                         score
+                        explanation
                         metadata
                         trace {
                           traceId

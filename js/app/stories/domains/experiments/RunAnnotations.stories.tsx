@@ -52,6 +52,7 @@ const mockExperimentRunWithAnnotations: ExperimentRun = {
           name: "answer_relevance",
           label: null,
           score: 0.92,
+          explanation: "The response is relevant to the requested SQL query.",
           metadata: null,
           trace: {
             traceId: "eval-trace-111",
@@ -65,6 +66,8 @@ const mockExperimentRunWithAnnotations: ExperimentRun = {
           name: "column_coverage",
           label: null,
           score: 0.5,
+          explanation:
+            '{"metric":{"explanation":"One of two expected columns is present.","numerator":1,"denominator":2,"unknown":0,"applicable":true}}',
           metadata: null,
           trace: {
             traceId: "eval-trace-222",
@@ -78,6 +81,7 @@ const mockExperimentRunWithAnnotations: ExperimentRun = {
           name: "verbosity",
           label: null,
           score: 0.81,
+          explanation: null,
           metadata: null,
           trace: {
             traceId: "eval-trace-333",
@@ -327,6 +331,7 @@ function scoreCaseRun({
     name,
     label: annotationLabel,
     score,
+    explanation: null,
     metadata: null,
     trace: {
       traceId: `eval-trace-${name}-${score}`,
