@@ -365,13 +365,14 @@ export function ExperimentsTable({
       `,
       dataset
     );
-  const [columnVisibility, setColumnVisibility] = usePersistedState<
+  const [storedColumnVisibility, setColumnVisibility] = usePersistedState<
     Record<string, boolean>
   >(`${EXPERIMENTS_TABLE_STORAGE_KEY_PREFIX}visibility-${data.id}`, {
     id: false,
     experimentJobStatus: false,
     experimentJobProgress: false,
   });
+  const columnVisibility = { ...storedColumnVisibility };
   const [columnSizing, setColumnSizing] = usePersistedState<
     Record<string, number>
   >(`${EXPERIMENTS_TABLE_STORAGE_KEY_PREFIX}sizing-${data.id}`, {});
@@ -610,6 +611,9 @@ export function ExperimentsTable({
   const annotationColumns: ColumnDef<TableRow>[] =
     data.experimentAnnotationSummaries.map((annotationSummary) => {
       const { annotationName, minScore, maxScore } = annotationSummary;
+      columnVisibility[`${ANNOTATION_COLUMN_PREFIX}${annotationName}`] ??=
+        Object.keys(annotationConfigByName).length === 0 ||
+        Object.hasOwn(annotationConfigByName, annotationName);
       return {
         header: () => (
           <Flex
