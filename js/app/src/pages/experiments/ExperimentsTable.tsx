@@ -1,6 +1,7 @@
 import { css } from "@emotion/react";
 import type { RowData } from "@tanstack/react-table";
 import { flexRender, useTable } from "@tanstack/react-table";
+import { filter } from "lodash";
 import type { ReactNode } from "react";
 import {
   memo,
@@ -365,13 +366,14 @@ export function ExperimentsTable({
       `,
       dataset
     );
-  const [columnVisibility, setColumnVisibility] = usePersistedState<
+  const [storedColumnVisibility, setColumnVisibility] = usePersistedState<
     Record<string, boolean>
   >(`${EXPERIMENTS_TABLE_STORAGE_KEY_PREFIX}visibility-${data.id}`, {
     id: false,
     experimentJobStatus: false,
     experimentJobProgress: false,
   });
+  const columnVisibility = { ...storedColumnVisibility };
   const [columnSizing, setColumnSizing] = usePersistedState<
     Record<string, number>
   >(`${EXPERIMENTS_TABLE_STORAGE_KEY_PREFIX}sizing-${data.id}`, {});
@@ -431,9 +433,13 @@ export function ExperimentsTable({
   const baselineSummaryByAnnotationName = indexSummariesByAnnotationName(
     baselineExperiment?.annotationSummaries
   );
+  const evaluators = data.datasetEvaluators.edges.map((edge) => edge.node);
   const annotationConfigByName = indexAnnotationConfigsByName(
+    datasetEvaluatorsToAnnotationConfigs(evaluators)
+  );
+  const configuredAnnotationConfigByName = indexAnnotationConfigsByName(
     datasetEvaluatorsToAnnotationConfigs(
-      data.datasetEvaluators.edges.map((edge) => edge.node)
+      filter(evaluators, "outputConfigs.length")
     )
   );
   /**
@@ -610,6 +616,9 @@ export function ExperimentsTable({
   const annotationColumns: ColumnDef<TableRow>[] =
     data.experimentAnnotationSummaries.map((annotationSummary) => {
       const { annotationName, minScore, maxScore } = annotationSummary;
+      columnVisibility[`${ANNOTATION_COLUMN_PREFIX}${annotationName}`] ??=
+        Object.keys(configuredAnnotationConfigByName).length === 0 ||
+        Object.hasOwn(configuredAnnotationConfigByName, annotationName);
       return {
         header: () => (
           <Flex
@@ -822,13 +831,13 @@ export function ExperimentsTable({
             <Flex direction="row" gap="size-100">
               {project?.id ? (
                 <LinkButton
-                  to={`/projects/${project?.id}`}
+                  to={`/datasets/${data.id}/compare?experimentId=${row.original.id}&view=list`}
                   leadingVisual={<Icon svg={<Icons.Trace />} />}
                   size="S"
-                  aria-label="View traces"
+                  aria-label="View runs and linked traces"
                   isDisabled={!project?.id}
                 >
-                  Traces
+                  Runs &amp; traces
                 </LinkButton>
               ) : null}
               <DownloadExperimentActionMenu experimentId={row.original.id} />

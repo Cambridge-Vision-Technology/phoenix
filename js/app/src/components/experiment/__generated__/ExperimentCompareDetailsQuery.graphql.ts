@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<2e185738afbf1d7fda1d3475eb3a0c53>>
+ * @generated SignedSource<<9a56e4aa9101a772ebe61609a106b465>>
  * @lightSyntaxTransform
  */
 
@@ -37,9 +37,11 @@ export type ExperimentCompareDetailsQuery$data = {
             readonly upperBound: number | null;
           } | {
             readonly __typename: "FreeformAnnotationConfig";
+            readonly lowerBound: number | null;
             readonly name: string;
             readonly optimizationDirection: OptimizationDirection;
             readonly threshold: number | null;
+            readonly upperBound: number | null;
           } | {
             // This will never be '%other', but we need some
             // value in case none of the concrete values match.
@@ -70,6 +72,7 @@ export type ExperimentCompareDetailsQuery$data = {
           readonly annotations: {
             readonly edges: ReadonlyArray<{
               readonly annotation: {
+                readonly explanation: string | null;
                 readonly id: string;
                 readonly label: string | null;
                 readonly metadata: any;
@@ -313,22 +316,29 @@ v20 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
+  "name": "explanation",
+  "storageKey": null
+},
+v21 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
   "name": "metadata",
   "storageKey": null
 },
-v21 = [
+v22 = [
   {
     "kind": "Variable",
     "name": "id",
     "variableName": "datasetId"
   }
 ],
-v22 = {
+v23 = {
   "kind": "Literal",
   "name": "includeEphemeral",
   "value": true
 },
-v23 = {
+v24 = {
   "alias": null,
   "args": [
     {
@@ -336,7 +346,7 @@ v23 = {
       "name": "filterIds",
       "variableName": "experimentIds"
     },
-    (v22/*:: as any*/)
+    (v23/*:: as any*/)
   ],
   "concreteType": "ExperimentConnection",
   "kind": "LinkedField",
@@ -377,10 +387,10 @@ v23 = {
   ],
   "storageKey": null
 },
-v24 = {
+v25 = {
   "alias": null,
   "args": [
-    (v22/*:: as any*/)
+    (v23/*:: as any*/)
   ],
   "concreteType": "DatasetExperimentAnnotationSummary",
   "kind": "LinkedField",
@@ -411,32 +421,32 @@ v24 = {
   ],
   "storageKey": "experimentAnnotationSummaries(includeEphemeral:true)"
 },
-v25 = [
+v26 = [
   {
     "kind": "Literal",
     "name": "first",
     "value": 100
   }
 ],
-v26 = {
+v27 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "__typename",
   "storageKey": null
 },
-v27 = {
+v28 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
   "name": "optimizationDirection",
   "storageKey": null
 },
-v28 = {
+v29 = {
   "kind": "InlineFragment",
   "selections": [
     (v17/*:: as any*/),
-    (v27/*:: as any*/),
+    (v28/*:: as any*/),
     {
       "alias": null,
       "args": null,
@@ -454,46 +464,50 @@ v28 = {
   "type": "CategoricalAnnotationConfig",
   "abstractKey": null
 },
-v29 = {
+v30 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "lowerBound",
+  "storageKey": null
+},
+v31 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "upperBound",
+  "storageKey": null
+},
+v32 = {
   "kind": "InlineFragment",
   "selections": [
     (v17/*:: as any*/),
-    (v27/*:: as any*/),
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "lowerBound",
-      "storageKey": null
-    },
-    {
-      "alias": null,
-      "args": null,
-      "kind": "ScalarField",
-      "name": "upperBound",
-      "storageKey": null
-    }
+    (v28/*:: as any*/),
+    (v30/*:: as any*/),
+    (v31/*:: as any*/)
   ],
   "type": "ContinuousAnnotationConfig",
   "abstractKey": null
 },
-v30 = {
+v33 = {
   "kind": "InlineFragment",
   "selections": [
     (v17/*:: as any*/),
-    (v27/*:: as any*/),
+    (v28/*:: as any*/),
     {
       "alias": null,
       "args": null,
       "kind": "ScalarField",
       "name": "threshold",
       "storageKey": null
-    }
+    },
+    (v30/*:: as any*/),
+    (v31/*:: as any*/)
   ],
   "type": "FreeformAnnotationConfig",
   "abstractKey": null
 },
-v31 = {
+v34 = {
   "alias": null,
   "args": null,
   "concreteType": "Trace",
@@ -592,6 +606,7 @@ return {
                                       (v18/*:: as any*/),
                                       (v19/*:: as any*/),
                                       (v20/*:: as any*/),
+                                      (v21/*:: as any*/),
                                       (v15/*:: as any*/)
                                     ],
                                     "storageKey": null
@@ -620,7 +635,7 @@ return {
       },
       {
         "alias": "dataset",
-        "args": (v21/*:: as any*/),
+        "args": (v22/*:: as any*/),
         "concreteType": null,
         "kind": "LinkedField",
         "name": "node",
@@ -629,11 +644,11 @@ return {
           {
             "kind": "InlineFragment",
             "selections": [
-              (v23/*:: as any*/),
               (v24/*:: as any*/),
+              (v25/*:: as any*/),
               {
                 "alias": null,
-                "args": (v25/*:: as any*/),
+                "args": (v26/*:: as any*/),
                 "concreteType": "DatasetEvaluatorConnection",
                 "kind": "LinkedField",
                 "name": "datasetEvaluators",
@@ -664,10 +679,10 @@ return {
                             "name": "outputConfigs",
                             "plural": true,
                             "selections": [
-                              (v26/*:: as any*/),
-                              (v28/*:: as any*/),
+                              (v27/*:: as any*/),
                               (v29/*:: as any*/),
-                              (v30/*:: as any*/)
+                              (v32/*:: as any*/),
+                              (v33/*:: as any*/)
                             ],
                             "storageKey": null
                           }
@@ -710,7 +725,7 @@ return {
         "name": "node",
         "plural": false,
         "selections": [
-          (v26/*:: as any*/),
+          (v27/*:: as any*/),
           {
             "kind": "InlineFragment",
             "selections": [
@@ -745,7 +760,7 @@ return {
                           (v10/*:: as any*/),
                           (v11/*:: as any*/),
                           (v12/*:: as any*/),
-                          (v31/*:: as any*/),
+                          (v34/*:: as any*/),
                           (v16/*:: as any*/),
                           {
                             "alias": null,
@@ -776,7 +791,8 @@ return {
                                       (v18/*:: as any*/),
                                       (v19/*:: as any*/),
                                       (v20/*:: as any*/),
-                                      (v31/*:: as any*/)
+                                      (v21/*:: as any*/),
+                                      (v34/*:: as any*/)
                                     ],
                                     "storageKey": null
                                   }
@@ -805,21 +821,21 @@ return {
       },
       {
         "alias": "dataset",
-        "args": (v21/*:: as any*/),
+        "args": (v22/*:: as any*/),
         "concreteType": null,
         "kind": "LinkedField",
         "name": "node",
         "plural": false,
         "selections": [
-          (v26/*:: as any*/),
+          (v27/*:: as any*/),
           {
             "kind": "InlineFragment",
             "selections": [
-              (v23/*:: as any*/),
               (v24/*:: as any*/),
+              (v25/*:: as any*/),
               {
                 "alias": null,
-                "args": (v25/*:: as any*/),
+                "args": (v26/*:: as any*/),
                 "concreteType": "DatasetEvaluatorConnection",
                 "kind": "LinkedField",
                 "name": "datasetEvaluators",
@@ -850,10 +866,10 @@ return {
                             "name": "outputConfigs",
                             "plural": true,
                             "selections": [
-                              (v26/*:: as any*/),
-                              (v28/*:: as any*/),
+                              (v27/*:: as any*/),
                               (v29/*:: as any*/),
-                              (v30/*:: as any*/),
+                              (v32/*:: as any*/),
+                              (v33/*:: as any*/),
                               {
                                 "kind": "InlineFragment",
                                 "selections": [
@@ -886,16 +902,16 @@ return {
     ]
   },
   "params": {
-    "cacheID": "3e070d6171229a7d27fe2c44669d1065",
+    "cacheID": "72409f59f5cb5e7e497792a1108cbcec",
     "id": null,
     "metadata": {},
     "name": "ExperimentCompareDetailsQuery",
     "operationKind": "query",
-    "text": "query ExperimentCompareDetailsQuery(\n  $datasetId: ID!\n  $datasetExampleId: ID!\n  $datasetVersionId: ID!\n  $experimentIds: [ID!]!\n) {\n  example: node(id: $datasetExampleId) {\n    __typename\n    ... on DatasetExample {\n      revision(datasetVersionId: $datasetVersionId) {\n        input\n        referenceOutput: output\n      }\n      experimentRuns(experimentIds: $experimentIds, first: 120) {\n        edges {\n          run: node {\n            id\n            repetitionNumber\n            latencyMs\n            experimentId\n            output\n            error\n            trace {\n              traceId\n              projectId\n              id\n            }\n            costSummary {\n              total {\n                cost\n                tokens\n              }\n            }\n            annotations {\n              edges {\n                annotation: node {\n                  id\n                  name\n                  label\n                  score\n                  metadata\n                  trace {\n                    traceId\n                    projectId\n                    id\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n    id\n  }\n  dataset: node(id: $datasetId) {\n    __typename\n    ... on Dataset {\n      experiments(filterIds: $experimentIds, includeEphemeral: true) {\n        edges {\n          experiment: node {\n            id\n            name\n            repetitions\n          }\n        }\n      }\n      experimentAnnotationSummaries(includeEphemeral: true) {\n        annotationName\n        minScore\n        maxScore\n      }\n      datasetEvaluators(first: 100) {\n        edges {\n          node {\n            name\n            outputConfigs {\n              __typename\n              ... on CategoricalAnnotationConfig {\n                name\n                optimizationDirection\n                values {\n                  label\n                  score\n                }\n              }\n              ... on ContinuousAnnotationConfig {\n                name\n                optimizationDirection\n                lowerBound\n                upperBound\n              }\n              ... on FreeformAnnotationConfig {\n                name\n                optimizationDirection\n                threshold\n              }\n              ... on Node {\n                __isNode: __typename\n                id\n              }\n            }\n            id\n          }\n        }\n      }\n    }\n    id\n  }\n}\n"
+    "text": "query ExperimentCompareDetailsQuery(\n  $datasetId: ID!\n  $datasetExampleId: ID!\n  $datasetVersionId: ID!\n  $experimentIds: [ID!]!\n) {\n  example: node(id: $datasetExampleId) {\n    __typename\n    ... on DatasetExample {\n      revision(datasetVersionId: $datasetVersionId) {\n        input\n        referenceOutput: output\n      }\n      experimentRuns(experimentIds: $experimentIds, first: 120) {\n        edges {\n          run: node {\n            id\n            repetitionNumber\n            latencyMs\n            experimentId\n            output\n            error\n            trace {\n              traceId\n              projectId\n              id\n            }\n            costSummary {\n              total {\n                cost\n                tokens\n              }\n            }\n            annotations {\n              edges {\n                annotation: node {\n                  id\n                  name\n                  label\n                  score\n                  explanation\n                  metadata\n                  trace {\n                    traceId\n                    projectId\n                    id\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n    id\n  }\n  dataset: node(id: $datasetId) {\n    __typename\n    ... on Dataset {\n      experiments(filterIds: $experimentIds, includeEphemeral: true) {\n        edges {\n          experiment: node {\n            id\n            name\n            repetitions\n          }\n        }\n      }\n      experimentAnnotationSummaries(includeEphemeral: true) {\n        annotationName\n        minScore\n        maxScore\n      }\n      datasetEvaluators(first: 100) {\n        edges {\n          node {\n            name\n            outputConfigs {\n              __typename\n              ... on CategoricalAnnotationConfig {\n                name\n                optimizationDirection\n                values {\n                  label\n                  score\n                }\n              }\n              ... on ContinuousAnnotationConfig {\n                name\n                optimizationDirection\n                lowerBound\n                upperBound\n              }\n              ... on FreeformAnnotationConfig {\n                name\n                optimizationDirection\n                threshold\n                lowerBound\n                upperBound\n              }\n              ... on Node {\n                __isNode: __typename\n                id\n              }\n            }\n            id\n          }\n        }\n      }\n    }\n    id\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "68c1e16af64fe678f56846ad14aa51c6";
+(node as any).hash = "ee2bf3431f34f823708d797e78f02551";
 
 export default node;
