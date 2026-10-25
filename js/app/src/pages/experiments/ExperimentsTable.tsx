@@ -1,6 +1,7 @@
 import { css } from "@emotion/react";
 import type { RowData } from "@tanstack/react-table";
 import { flexRender, useTable } from "@tanstack/react-table";
+import { filter } from "lodash";
 import type { ReactNode } from "react";
 import {
   memo,
@@ -432,9 +433,13 @@ export function ExperimentsTable({
   const baselineSummaryByAnnotationName = indexSummariesByAnnotationName(
     baselineExperiment?.annotationSummaries
   );
+  const evaluators = data.datasetEvaluators.edges.map((edge) => edge.node);
   const annotationConfigByName = indexAnnotationConfigsByName(
+    datasetEvaluatorsToAnnotationConfigs(evaluators)
+  );
+  const configuredAnnotationConfigByName = indexAnnotationConfigsByName(
     datasetEvaluatorsToAnnotationConfigs(
-      data.datasetEvaluators.edges.map((edge) => edge.node)
+      filter(evaluators, "outputConfigs.length")
     )
   );
   /**
@@ -612,8 +617,8 @@ export function ExperimentsTable({
     data.experimentAnnotationSummaries.map((annotationSummary) => {
       const { annotationName, minScore, maxScore } = annotationSummary;
       columnVisibility[`${ANNOTATION_COLUMN_PREFIX}${annotationName}`] ??=
-        Object.keys(annotationConfigByName).length === 0 ||
-        Object.hasOwn(annotationConfigByName, annotationName);
+        Object.keys(configuredAnnotationConfigByName).length === 0 ||
+        Object.hasOwn(configuredAnnotationConfigByName, annotationName);
       return {
         header: () => (
           <Flex
