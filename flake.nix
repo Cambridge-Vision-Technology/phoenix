@@ -78,6 +78,15 @@
         "argonaut-codecs"
         "node-process"
       ];
+      frontendGraphModules = pkgs.linkFarm "phoenix-frontend-graph-node-modules" [
+        {
+          name = "typescript";
+          path = pkgs.fetchzip {
+            url = "https://registry.npmjs.org/typescript/-/typescript-6.0.3.tgz";
+            hash = "sha256-3+cPVJRyySKkVrRsOld6ShMzHwOP7UFFy0mrq3ZoBKA=";
+          };
+        }
+      ];
       tooling = builtins.mapAttrs (
         _: entry:
         purs.purs {
@@ -86,6 +95,10 @@
             "${platformSource entry.platform}/tools"
           ];
           dependencies = entry.dependencies;
+          nodejs = if entry.module == "Phoenix.Frontend.Inputs" then pkgs.nodejs_26 else toolingPkgs.nodejs;
+          foreign = pkgs.lib.optionalAttrs (entry.module == "Phoenix.Frontend.Inputs") {
+            "Platform.Node.Frontend".node_modules = frontendGraphModules;
+          };
         }
       ) allToolInputs;
       tools = builtins.mapAttrs (
@@ -197,6 +210,79 @@
         set -euo pipefail
         exec ${pkgs.coreutils}/bin/timeout 60s ${tools.check} "$out" ${frontend} ${./nix/frontend-static.txt}
       '';
+      frontendDiscoveryCandidates = fs.toSource {
+        root = ./.;
+        fileset = fs.unions [
+          (fs.fromSource (
+            pkgs.lib.cleanSourceWith {
+              src = ./js;
+              filter =
+                path: type:
+                let
+                  relative = pkgs.lib.removePrefix (toString ./js + "/") path;
+                  segments = pkgs.lib.splitString "/" relative;
+                  name = builtins.baseNameOf path;
+                  publicAsset = pkgs.lib.hasPrefix "app/static/" relative;
+                in
+                publicAsset
+                || (
+                  !builtins.any (
+                    segment:
+                    builtins.elem segment [
+                      "node_modules"
+                      "__tests__"
+                      "__mocks__"
+                      "tests"
+                      "test"
+                      "fixtures"
+                      "__fixtures__"
+                      ".agents"
+                    ]
+                  ) segments
+                  && !pkgs.lib.hasPrefix "examples/" relative
+                  && !pkgs.lib.hasPrefix "benchmarks/" relative
+                  && (
+                    type == "directory"
+                    || (
+                      !(pkgs.lib.hasSuffix ".md" name)
+                      && !(pkgs.lib.hasSuffix ".tsbuildinfo" name)
+                      && builtins.match ".*\\.(test|spec|stories)\\..*" name == null
+                    )
+                  )
+                );
+            }
+          ))
+          (fs.fileFilter (file: file.name == "package.json") ./js)
+          ./schemas/openapi.json
+        ];
+      };
+      frontendProductInputs =
+        mode:
+        pkgs.stdenvNoCC.mkDerivation {
+          name = "phoenix-frontend-product-inputs-${mode}";
+          src = frontendDiscoveryCandidates;
+          inherit pnpmDeps;
+          pnpmRoot = "js";
+          pnpmWorkspaces = [ "phoenix-ui..." ];
+          nativeBuildInputs = [
+            pkgs.nodejs_26
+            pnpm
+            pkgs.pnpmConfigHook
+            pkgs.findutils
+          ];
+          PHOENIX_ENABLE_SOURCE_MAP = "True";
+          pnpm_config_verify_deps_before_run = "false";
+          pnpm_config_offline = "true";
+          buildPhase = ''
+            set -euo pipefail
+            exec ${pkgs.coreutils}/bin/timeout 60s ${tools.inputs} ${mode} "$out" "$PWD" ${pnpm}/bin/pnpm ${./nix/frontend-assets.json} ${
+              if mode == "check" then "${./nix/frontend-inputs.json}" else "-"
+            }
+          '';
+          dontInstall = true;
+          dontFixup = true;
+        };
+      frontendInputDiscovery = frontendProductInputs "generate";
       python = pkgs.python313;
       pythonSourceInputs = builtins.fromJSON (builtins.readFile ./nix/python-source-inputs.json);
       pythonRegistry = builtins.fromJSON (builtins.readFile ./nix/python-registry.json);
@@ -310,10 +396,12 @@
     {
       packages.${system} = {
         inherit frontend;
+        frontend-inputs-discovery = frontendInputDiscovery;
         default = environment;
       };
       checks.${system} = {
         frontend-file-set = parity;
+        frontend-product-inputs = frontendProductInputs "check";
         frontend-tool-inputs = pkgs.linkFarm "phoenix-frontend-tool-inputs" (
           pkgs.lib.mapAttrsToList (name: _: {
             inherit name;
@@ -335,7 +423,12 @@
       apps.${system} = {
         frontend-inputs = {
           type = "app";
-          program = toString tools.inputs;
+          program = toString (
+            pkgs.writeShellScript "phoenix-frontend-inputs" ''
+              set -euo pipefail
+              exec ${tools.inputs} export ${frontendInputDiscovery}/inventory.json "$@"
+            ''
+          );
         };
         python-inputs = {
           type = "app";
