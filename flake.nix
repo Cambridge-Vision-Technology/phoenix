@@ -285,6 +285,51 @@
       frontendInputDiscovery = frontendProductInputs "generate";
       python = pkgs.python313;
       pythonSourceInputs = builtins.fromJSON (builtins.readFile ./nix/python-source-inputs.json);
+      pythonProject = builtins.fromTOML (builtins.readFile ./pyproject.toml);
+      pythonBuildConfig = pkgs.writeText "phoenix-python-build-config.json" (
+        builtins.toJSON {
+          inherit (pythonProject.tool.hatch.build.targets.wheel) packages artifacts;
+          excluded = pythonProject.tool.hatch.build.targets.wheel.exclude;
+          backend = pythonProject.build-system.build-backend;
+          onlyPackages = pythonProject.tool.hatch.build.only-packages;
+          version = pythonProject.tool.hatch.version.path;
+          readme = pythonProject.project.readme;
+          licenses = pythonProject.project.license-files.paths;
+          entries = builtins.attrValues pythonProject.project.scripts;
+          wheelKeys = builtins.attrNames pythonProject.tool.hatch.build.targets.wheel;
+          buildKeys = builtins.attrNames pythonProject.tool.hatch.build;
+        }
+      );
+      pythonDiscoveryCandidates = fs.toSource {
+        root = ./.;
+        fileset = fs.unions [
+          (fs.unions (
+            map (path: ./. + "/${path}") (
+              [
+                "pyproject.toml"
+                pythonProject.project.readme
+              ]
+              ++ pythonProject.project.license-files.paths
+            )
+          ))
+          (fs.fromSource (
+            pkgs.lib.cleanSourceWith {
+              src = ./src/phoenix;
+              filter =
+                path: _:
+                let
+                  relative = pkgs.lib.removePrefix (toString ./src/phoenix + "/") path;
+                in
+                !builtins.any (prefix: relative == prefix || pkgs.lib.hasPrefix (prefix + "/") relative) [
+                  "client"
+                  "evals"
+                  "otel"
+                  "server/static"
+                ];
+            }
+          ))
+        ];
+      };
       pythonRegistry = builtins.fromJSON (builtins.readFile ./nix/python-registry.json);
       pythonWorkspace = inputs.uv2nix.lib.workspace.loadWorkspace { workspaceRoot = ./.; };
       pythonLock = builtins.fromTOML (builtins.readFile ./uv.lock);
@@ -374,6 +419,21 @@
         set -euo pipefail
         exec ${pkgs.coreutils}/bin/timeout 60s ${tools.check} "$out" ${environment}/${python.sitePackages}/phoenix/server/static ${./nix/frontend-static.txt}
       '';
+      pythonProductInputs =
+        mode:
+        pkgs.stdenvNoCC.mkDerivation {
+          name = "phoenix-python-product-inputs-${mode}";
+          src = pythonDiscoveryCandidates;
+          buildPhase = ''
+            set -euo pipefail
+            exec ${pkgs.coreutils}/bin/timeout 60s ${tools.python-inputs} ${mode} "$out" "$PWD" ${pythonBuildConfig} ${
+              if mode == "check" then "${./nix/python-source-inputs.json}" else "-"
+            } ${if mode == "check" then "${environment}/${python.sitePackages}" else "-"} ${python}/bin/python
+          '';
+          dontInstall = true;
+          dontFixup = true;
+        };
+      pythonInputDiscovery = pythonProductInputs "generate";
       lintSource = source (
         pkgs.lib.concatMap (entry: entry.sources) (builtins.attrValues toolInputs) ++ [ "whine.yaml" ]
       );
@@ -397,6 +457,8 @@
       packages.${system} = {
         inherit frontend;
         frontend-inputs-discovery = frontendInputDiscovery;
+        python-inputs-discovery = pythonInputDiscovery;
+        python-source = pythonSet.arize-phoenix;
         default = environment;
       };
       checks.${system} = {
@@ -410,6 +472,7 @@
         );
         frontend-tool-lint = lint;
         python-import = pythonImport;
+        python-product-inputs = pythonProductInputs "check";
         python-distributions = pythonParity;
         python-static-file-set = pythonStatic;
         python-tool-lint = pythonLint;
@@ -432,7 +495,12 @@
         };
         python-inputs = {
           type = "app";
-          program = toString tools.python-inputs;
+          program = toString (
+            pkgs.writeShellScript "phoenix-python-inputs" ''
+              set -euo pipefail
+              exec ${tools.python-inputs} export ${pythonInputDiscovery}/inventory.json "$@"
+            ''
+          );
         };
       };
     };

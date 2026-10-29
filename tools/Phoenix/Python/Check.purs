@@ -9,6 +9,7 @@ import Data.Argonaut.Parser as Data.Argonaut.Parser
 import Data.Array as Data.Array
 import Data.Bifunctor as Data.Bifunctor
 import Data.Either as Data.Either
+import Data.Foldable as Data.Foldable
 import Data.Maybe as Data.Maybe
 import Data.Nullable as Data.Nullable
 import Data.String as Data.String
@@ -34,6 +35,16 @@ run output python arguments = do
 normaliseName :: String -> String
 normaliseName = Data.String.replaceAll (Data.String.Pattern ".") (Data.String.Replacement "_") <<< Data.String.replaceAll (Data.String.Pattern "-") (Data.String.Replacement "_") <<< Data.String.toLower
 
+distributionDecision :: Array String -> Int -> Array String -> { accepted :: Boolean, diff :: Array String, entries :: Int, uniqueEntries :: Int, metadataEntries :: Int }
+distributionDecision expected metadataEntries actual =
+  let
+    diff = map ("- " <> _) (Data.Array.difference expected actual) <> map ("+ " <> _) (Data.Array.difference actual expected)
+    entries = Data.Array.length actual
+    uniqueEntries = Data.Array.length (Data.Array.nub actual)
+    accepted = Data.Array.null diff && entries == 215 && uniqueEntries == 215 && metadataEntries == 215
+  in
+    { accepted, diff, entries, uniqueEntries, metadataEntries }
+
 parity :: String -> String -> String -> String -> String -> Effect.Effect Unit
 parity output python pip site reference = do
   referenceText <- Platform.Node.Build.readImpl reference
@@ -48,28 +59,38 @@ parity output python pip site reference = do
   siteEntries <- Platform.Node.Build.entriesImpl site
   let
     metadataEntries = Data.Array.filter (\entry -> Data.Maybe.isJust (Data.String.stripSuffix (Data.String.Pattern ".dist-info") entry) || Data.Maybe.isJust (Data.String.stripSuffix (Data.String.Pattern ".egg-info") entry)) siteEntries
-  unless (Data.Array.length metadataEntries == 215)
-    (Effect.Exception.throw "Installed distribution metadata must contain exactly 215 entries; pip must not hide duplicate or invalid metadata")
   text <- run output python [ pip, "--isolated", "--disable-pip-version-check", "list", "--path", site, "--format=json" ]
   rows <- case Data.Argonaut.Parser.jsonParser text >>= Data.Bifunctor.lmap show <<< Data.Argonaut.Decode.decodeJson of
     Data.Either.Left error -> Effect.Exception.throw ("Invalid pip distribution inventory: " <> error)
     Data.Either.Right (values :: Array { name :: String, version :: String }) -> pure values
   let
     actual = Data.Array.sort (map (\row -> normaliseName row.name <> "-" <> row.version) rows)
-    diff = map ("- " <> _) (Data.Array.difference expected actual) <> map ("+ " <> _) (Data.Array.difference actual expected)
+    positive = distributionDecision expected (Data.Array.length metadataEntries) actual
+    diff = positive.diff
     render = Data.String.joinWith "\n"
-    missingRejected = expected /= Data.Array.drop 1 actual
-    addedRejected = expected /= Data.Array.sort (actual <> [ "unexpected_distribution-0" ])
-    versionRejected = expected /= Data.Array.sort (Data.Array.drop 1 actual <> [ "aioboto3-0" ])
   Platform.Node.Build.writeImpl (output <> "/expected.txt") (render expected <> "\n")
   Platform.Node.Build.writeImpl (output <> "/reference.txt") referenceText
   Platform.Node.Build.writeImpl (output <> "/actual.txt") (render actual <> "\n")
   Platform.Node.Build.writeImpl (output <> "/diff.txt") (if Data.Array.null diff then "" else render diff <> "\n")
-  unless (Data.Array.null diff && Data.Array.length actual == 215 && Data.Array.length (Data.Array.nub actual) == 215)
-    (Effect.Exception.throw ("Distribution mismatch:\n" <> render diff))
-  unless (missingRejected && addedRejected && versionRejected) (Effect.Exception.throw "Distribution rejection controls failed")
+  unless positive.accepted (Effect.Exception.throw ("Distribution mismatch:\n" <> show positive))
+  first <- Data.Maybe.maybe (Effect.Exception.throw "Distribution controls require an existing entry") pure (Data.Array.head rows)
+  let
+    firstName = normaliseName first.name
+    original = firstName <> "-" <> first.version
+    changed = firstName <> "-" <> first.version <> ".control"
+    mutatedVersion = map (\entry -> if entry == original then changed else entry) actual
+    controls =
+      [ { label: "missing", result: distributionDecision expected 214 (Data.Array.filter (_ /= original) actual) }
+      , { label: "added", result: distributionDecision expected 216 (actual <> [ "unexpected_distribution-0" ]) }
+      , { label: "same-name-wrong-version", result: distributionDecision expected 215 mutatedVersion }
+      , { label: "duplicate", result: distributionDecision expected 215 (Data.Array.drop 1 actual <> [ Data.Maybe.fromMaybe original (Data.Array.last actual) ]) }
+      , { label: "hidden-metadata", result: distributionDecision expected 216 actual }
+      ]
+  Data.Foldable.traverse_ (\control -> unless (not control.result.accepted) (Effect.Exception.throw ("Distribution control was accepted: " <> control.label))) controls
+  Platform.Node.Build.writeImpl (output <> "/controls.json")
+    (Data.Argonaut.Core.stringifyWithIndent 2 (Data.Argonaut.Encode.encodeJson { original, changed, controls }) <> "\n")
   Platform.Node.Build.writeImpl (output <> "/parity.json")
-    (Data.Argonaut.Core.stringify (Data.Argonaut.Encode.encodeJson { entries: Data.Array.length actual, metadataEntries: Data.Array.length metadataEntries, emptyDiff: true, missingRejected, addedRejected, versionRejected, metadataBackend: "pip importlib.metadata", reference }) <> "\n")
+    (Data.Argonaut.Core.stringify (Data.Argonaut.Encode.encodeJson { decision: positive, controlsRejected: Data.Foldable.all (not <<< _.result.accepted) controls, metadataBackend: "pip importlib.metadata", reference }) <> "\n")
 
 main :: Effect.Effect Unit
 main = do
