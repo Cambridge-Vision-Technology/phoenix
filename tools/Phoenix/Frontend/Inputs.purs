@@ -64,7 +64,14 @@ workspaceClosure executable = do
   require (Data.Nullable.toMaybe result.status == Data.Maybe.Just 0 && Data.Maybe.isNothing (Data.Nullable.toMaybe result.error)) ("Frontend graph command failed: " <> show arguments <> " " <> show result.stderr)
   text <- Data.Maybe.maybe (Effect.Exception.throw "Graph command returned no JSON") pure (Data.Nullable.toMaybe result.stdout)
   json <- Data.Either.either Effect.Exception.throw pure (Data.Argonaut.Parser.jsonParser text)
-  Data.Either.either (Effect.Exception.throw <<< show) pure (Data.Argonaut.Decode.decodeJson json)
+  workspaces <- Data.Either.either (Effect.Exception.throw <<< show) pure (Data.Argonaut.Decode.decodeJson json)
+  configuration <- Platform.Node.Inventory.graphImpl executable [ "config", "list" ] { encoding: "utf8", timeout: 20000, maxBuffer: 33554432 }
+  require (Data.Nullable.toMaybe configuration.status == Data.Maybe.Just 0 && Data.Maybe.isNothing (Data.Nullable.toMaybe configuration.error)) "Cannot inspect pnpm build settings"
+  configurationText <- Data.Maybe.maybe (Effect.Exception.throw "pnpm returned no build settings") pure (Data.Nullable.toMaybe configuration.stdout)
+  configurationJson <- Data.Either.either Effect.Exception.throw pure (Data.Argonaut.Parser.jsonParser configurationText)
+  settings <- Data.Either.either (Effect.Exception.throw <<< show) pure (Data.Argonaut.Decode.decodeJson configurationJson) :: Effect.Effect (Foreign.Object.Object Data.Argonaut.Core.Json)
+  require (not (Data.Foldable.any (flip Foreign.Object.member settings) [ "patchedDependencies", "globalPnpmfile", "pnpmfile" ])) "Unsupported pnpm computed file/patch setting requires an explicit frontend build-input declaration"
+  pure workspaces
 
 configClosure :: String -> String -> Effect.Effect (Array String)
 configClosure root path = do
@@ -147,6 +154,7 @@ discover root pnpm assets vite = do
             pure [ { find, replacement } ]
     )
     aliases
+  app <- Data.Maybe.maybe (Effect.Exception.throw "App TypeScript configuration is missing") pure (Data.Array.find (_.path >>> (_ == "js/app/tsconfig.json")) parsed)
   let
     visit path options = do
       visited <- Effect.Ref.read seen
@@ -201,8 +209,9 @@ discover root pnpm assets vite = do
                       when (request /= plain) (Effect.Ref.modify_ (_ <> [ resolved ]) moduleAssets)
           )
           (imports.importedFiles <> imports.referencedFiles)
+  visit "js/.pnpmfile.cjs" app.options
+  dependencyModules <- Data.Set.toUnfoldable <$> Effect.Ref.read seen :: Effect.Effect (Array String)
   Data.Foldable.traverse_ (\project -> Data.Foldable.traverse_ (\path -> unless (generated assets path) (visit path project.options)) project.files) parsed
-  app <- Data.Maybe.maybe (Effect.Exception.throw "App TypeScript configuration is missing") pure (Data.Array.find (_.path >>> (_ == "js/app/tsconfig.json")) parsed)
   Data.Foldable.traverse_ (\path -> unless (generated assets path) (visit path app.options)) (roots <> [ "js/app/vite.config.mts", "js/app/relay.config.js" ])
   observedEdges <- Effect.Ref.read edges
   observedAssets <- canonical <$> Effect.Ref.read moduleAssets
@@ -224,8 +233,8 @@ discover root pnpm assets vite = do
   viteFiles <- Data.Traversable.traverse (relative root) (Data.Array.filter (not <<< Data.String.contains (Data.String.Pattern "/node_modules/")) viteDependencies)
   importedFiles <- Data.Set.toUnfoldable <$> Effect.Ref.read seen :: Effect.Effect (Array String)
   let
-    dependencies = canonical (manifests <> [ "js/package.json", "js/.npmrc", "js/.pnpmfile.cjs", "js/pnpm-lock.yaml", "js/pnpm-workspace.yaml" ])
-    sources = canonical (Data.Array.filter (not <<< generated assets) importedFiles <> configFiles <> viteFiles <> publicFiles <> map _.input assets.generators <> [ "js/app/relay.config.js", "js/app/schema.graphql" ])
+    dependencies = canonical (manifests <> dependencyModules <> [ "js/package.json", "js/.npmrc", "js/pnpm-lock.yaml", "js/pnpm-workspace.yaml" ])
+    sources = Data.Array.difference (canonical (Data.Array.filter (not <<< generated assets) importedFiles <> configFiles <> viteFiles <> publicFiles <> map _.input assets.generators <> [ "js/app/relay.config.js", "js/app/schema.graphql" ])) dependencies
   pure { inventory: { dependencies, sources }, workspaces, edges: observedEdges, configs: configFiles, roots, publicDirectory, publicFiles: canonical publicFiles, moduleAssets: observedAssets, generators: assets.generators }
 
 validate :: Phoenix.Frontend.Inputs.Json.Inventory -> Phoenix.Frontend.Inputs.Json.Inventory -> Effect.Effect Unit
