@@ -1,0 +1,11 @@
+rulePackages:
+  - whine-core
+include:
+  - tools/**/*.purs
+rules:
+  UndesirableFunctions:
+    functions:
+      "Effect.Console.log": "Diagnostics must not use stdout"
+      "Partial.Unsafe.unsafePartial": "Use total functions"
+      "Unsafe.Coerce.unsafeCoerce": "Use typed boundaries"
+      "Effect.Unsafe.unsafePerformEffect": "Effects belong at interpreter edges"
