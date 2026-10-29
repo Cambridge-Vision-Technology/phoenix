@@ -1,0 +1,14 @@
+{
+  "arize-phoenix-client": {
+    "url": "https://files.pythonhosted.org/packages/93/e6/ce7d4acb909595d215a81effd1af1ee33e7ce09f1d53b095d8441afeed17/arize_phoenix_client-3.5.0-py3-none-any.whl",
+    "hash": "sha256:db7d05b692db0389d8d3306d59579793264f8ec3b2f7e9e5d724e9160ac78f72"
+  },
+  "arize-phoenix-evals": {
+    "url": "https://files.pythonhosted.org/packages/24/d9/bb0d005f3023301967120ec65b261315f422bb8a64f71f36eef61858cba6/arize_phoenix_evals-3.9.3-py3-none-any.whl",
+    "hash": "sha256:2c6dfcaa5f6355f0cc1a35782ad2087c39b85ac7896315910a50edda1c09167a"
+  },
+  "arize-phoenix-otel": {
+    "url": "https://files.pythonhosted.org/packages/57/48/01f01c14541a41c88c7ec0b17237540908ebc1fa72420636517104ea866f/arize_phoenix_otel-0.17.2-py3-none-any.whl",
+    "hash": "sha256:d4d87b98d67fa928d954cdbb1d0bf9f35f79a2c6572ae7aca1f6c430510f2f99"
+  }
+}
