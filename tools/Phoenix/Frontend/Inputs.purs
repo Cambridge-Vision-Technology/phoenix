@@ -35,7 +35,7 @@ refresh output root git = do
         base = "js/packages/" <> package <> "/"
       in
         Data.String.Utils.startsWith (base <> "src/") file || Data.Array.elem file (map (base <> _) [ "tsconfig.json", "tsconfig.esm.json", "tsconfig.browser.json" ])
-    appSource file = (Data.String.Utils.startsWith "js/app/src/" file && not (Data.String.Utils.startsWith "js/app/src/__mocks__/" file || Data.String.Utils.endsWith ".graphql.ts" file)) || Data.String.Utils.startsWith "js/app/static/" file || Data.Array.elem file [ "js/app/vite.config.mts", "js/app/relay.config.js", "js/app/schema.graphql", "js/tsconfig.base.json", "js/tsconfig.base.esm.json", "schemas/openapi.json" ]
+    appSource file = (Data.String.Utils.startsWith "js/app/src/" file && Data.Foldable.any (\extension -> Data.String.Utils.endsWith extension file) [ ".ts", ".tsx", ".css", ".grammar" ] && not (Data.String.Utils.startsWith "js/app/src/__mocks__/" file || Data.String.Utils.endsWith ".graphql.ts" file)) || Data.String.Utils.startsWith "js/app/static/" file || Data.Array.elem file [ "js/app/vite.config.mts", "js/app/relay.config.js", "js/app/schema.graphql", "js/tsconfig.base.json", "js/tsconfig.base.esm.json", "schemas/openapi.json" ]
     dependencies = Data.Array.filter dependency files
     sources = Data.Array.filter (\file -> not (dependency file) && (appSource file || Data.Foldable.any (packageSource file) workspacePackages)) files
   Platform.Node.Build.writeImpl output ("{\n  \"dependencies\": [\n" <> render dependencies <> "\n  ],\n  \"sources\": [\n" <> render sources <> "\n  ]\n}\n")
