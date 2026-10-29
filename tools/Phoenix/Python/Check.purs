@@ -45,6 +45,11 @@ parity output python pip site reference = do
     (Data.Array.filter (_ /= "") (Data.String.split (Data.String.Pattern "\n") referenceText))
   unless (Data.Array.length expected == 215 && Data.Array.length (Data.Array.nub expected) == 215)
     (Effect.Exception.throw "Distribution reference must contain exactly 215 unique entries")
+  siteEntries <- Platform.Node.Build.entriesImpl site
+  let
+    metadataEntries = Data.Array.filter (\entry -> Data.Maybe.isJust (Data.String.stripSuffix (Data.String.Pattern ".dist-info") entry) || Data.Maybe.isJust (Data.String.stripSuffix (Data.String.Pattern ".egg-info") entry)) siteEntries
+  unless (Data.Array.length metadataEntries == 215)
+    (Effect.Exception.throw "Installed distribution metadata must contain exactly 215 entries; pip must not hide duplicate or invalid metadata")
   text <- run output python [ pip, "--isolated", "--disable-pip-version-check", "list", "--path", site, "--format=json" ]
   rows <- case Data.Argonaut.Parser.jsonParser text >>= Data.Bifunctor.lmap show <<< Data.Argonaut.Decode.decodeJson of
     Data.Either.Left error -> Effect.Exception.throw ("Invalid pip distribution inventory: " <> error)
@@ -64,7 +69,7 @@ parity output python pip site reference = do
     (Effect.Exception.throw ("Distribution mismatch:\n" <> render diff))
   unless (missingRejected && addedRejected && versionRejected) (Effect.Exception.throw "Distribution rejection controls failed")
   Platform.Node.Build.writeImpl (output <> "/parity.json")
-    (Data.Argonaut.Core.stringify (Data.Argonaut.Encode.encodeJson { entries: Data.Array.length actual, emptyDiff: true, missingRejected, addedRejected, versionRejected, metadataBackend: "pip importlib.metadata", reference }) <> "\n")
+    (Data.Argonaut.Core.stringify (Data.Argonaut.Encode.encodeJson { entries: Data.Array.length actual, metadataEntries: Data.Array.length metadataEntries, emptyDiff: true, missingRejected, addedRejected, versionRejected, metadataBackend: "pip importlib.metadata", reference }) <> "\n")
 
 main :: Effect.Effect Unit
 main = do
