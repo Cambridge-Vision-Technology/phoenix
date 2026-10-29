@@ -1,0 +1,14 @@
+{
+  "python-check": {
+    "module": "Phoenix.Python.Check",
+    "dependencies": ["prelude", "effect", "arrays", "exceptions", "strings", "either", "bifunctors", "maybe", "nullable", "argonaut-codecs", "foldable-traversable", "node-process"],
+    "sources": ["tools/Phoenix/Python/Check.purs"],
+    "platform": ["tools/Platform/Node/Build.purs", "tools/Platform/Node/Build.js", "tools/Platform/Node/Inventory.purs", "tools/Platform/Node/Inventory.js"]
+  },
+  "python-inputs": {
+    "module": "Phoenix.Python.Inputs",
+    "dependencies": ["prelude", "effect", "arrays", "exceptions", "strings", "stringutils", "foldable-traversable", "argonaut-codecs", "node-process", "nullable", "maybe"],
+    "sources": ["tools/Phoenix/Python/Inputs.purs"],
+    "platform": ["tools/Platform/Node/Build.purs", "tools/Platform/Node/Build.js", "tools/Platform/Node/Inventory.purs", "tools/Platform/Node/Inventory.js"]
+  }
+}
