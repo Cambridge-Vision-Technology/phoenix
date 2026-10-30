@@ -25,7 +25,6 @@ import Node.Process as Node.Process
 import Phoenix.Package.Smoke.Json as Phoenix.Package.Smoke.Json
 import Platform.Node.Build as Platform.Node.Build
 import Platform.Node.ProcessControl as Platform.Node.ProcessControl
-import Platform.Process.Node.Managed as Platform.Process.Node.Managed
 import Test.Deadline as Test.Deadline
 import Test.Process as Test.Process
 
@@ -52,24 +51,26 @@ run = Control.Promise.fromAff do
     ( Effect.Aff.catchError
         ( deadline do
             requests <- Effect.Class.liftEffect (Effect.Ref.new [])
+            requestId <- Effect.Class.liftEffect (Effect.Ref.new 0)
             let
               root = owner.root
               pid = owner.pid
               port = owner.port
               base = "http://127.0.0.1:" <> show port
               arguments = owner.arguments
-              environment = owner.environment
               request label path = do
-                current <- Effect.Class.liftEffect Test.Deadline.now
+                id <- Effect.Class.liftEffect (Effect.Ref.modify (_ + 1) requestId)
+                Build.Json.write (report <> "/http-request.pending.json") { id, label, path }
+                Node.FS.Aff.rename (report <> "/http-request.pending.json") (report <> "/http-request.json")
                 let
-                  available = Test.Deadline.budget context.policy started (Data.Maybe.Just started) false current
-                assert "HTTP request has no remaining smoke budget" (available > 0)
-                observed <- Platform.Process.Node.Managed.run
-                  { timeout: Effect.Aff.Milliseconds (Data.Int.toNumber (min 1500 available)), maxStdout: 1048576, stderr: Platform.Process.Node.Managed.Capture 1048576, processTable: context.processTable }
-                  { cwd: root, env: environment, stdin: "" }
-                  context.curl
-                  [ "--noproxy", "*", "--silent", "--show-error", "--connect-timeout", "1", "--max-time", "1", "--output", report <> "/" <> label <> "-body.txt", "--dump-header", report <> "/" <> label <> "-headers.txt", "--write-out", "%{http_code}", base <> path ]
-                result <- Data.Either.either (Effect.Aff.throwError <<< Effect.Aff.error <<< show) pure observed
+                  await = do
+                    exists <- Effect.Class.liftEffect (Platform.Node.Build.existsImpl (report <> "/http-response.json"))
+                    if exists then do
+                      response <- Build.Json.read (report <> "/http-response.json") :: Effect.Aff.Aff Phoenix.Package.Smoke.Json.Response
+                      if response.id == id then pure response
+                      else Effect.Aff.delay (Effect.Aff.Milliseconds 5.0) *> await
+                    else Effect.Aff.delay (Effect.Aff.Milliseconds 5.0) *> await
+                result <- await
                 observations <- Effect.Class.liftEffect (Effect.Ref.modify (\history -> Data.Array.snoc history { method: "GET", url: base <> path, status: result.status, httpStatus: result.stdout, stderr: result.stderr }) requests)
                 Build.Json.write (report <> "/requests.json") observations
                 pure result
@@ -108,6 +109,9 @@ run = Control.Promise.fromAff do
                 cucumberPid = Data.Newtype.unwrap Node.Process.pid
               Build.Json.write (report <> "/interruption.json") { cucumberPid, serverPid: pid, root, port, health: "OK" }
               Effect.Class.liftEffect (Platform.Node.ProcessControl.signalImpl cucumberPid "SIGSTOP")
+            when owner.interruptRequest do
+              void (request "active-request" "/assets/index-BOHcm13E.js")
+              Effect.Aff.throwError (Effect.Aff.error "Active request interruption control unexpectedly completed")
             indexResponse <- request "index" "/"
             assert "UI index did not return 200" (indexResponse.status == 0 && indexResponse.stdout == "200")
             index <- Node.FS.Aff.readTextFile Node.Encoding.UTF8 (report <> "/index-body.txt")
@@ -149,4 +153,4 @@ run = Control.Promise.fromAff do
   finished <- Effect.Class.liftEffect Test.Deadline.now
   Build.Json.write (report <> "/journey.json") { package: context.package, launcher: context.package <> "/bin/phoenix", elapsedMs: finished - started, limitMs: context.policy.singleMilliseconds, accepted: Data.Either.isRight outcome, failure: Data.Either.either (Data.Maybe.Just <<< Effect.Exception.message) (const Data.Maybe.Nothing) outcome }
   Data.Either.either Effect.Aff.throwError pure outcome
-  assert "Smoke cleanup exceeded the shared 60-second deadline" (finished - started < Data.Int.toNumber context.policy.singleMilliseconds)
+  assert "Smoke exceeded the shared 60-second deadline" (finished - started < Data.Int.toNumber context.policy.singleMilliseconds)

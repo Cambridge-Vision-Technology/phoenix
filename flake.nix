@@ -575,6 +575,7 @@
           };
       packageSmoke = packageSmokeCheck "smoke";
       packageSmokeOwnership = packageSmokeCheck "stall-cucumber";
+      packageSmokeRequestOwnership = packageSmokeCheck "interrupt-request";
       pythonImport = pkgs.runCommand "phoenix-python-import" { } ''
         set -euo pipefail
         exec ${pkgs.coreutils}/bin/timeout 60s ${tools.python-check} import "$out" ${environment}
@@ -657,6 +658,7 @@
       checks.${system} = {
         package-smoke = packageSmoke;
         package-smoke-ownership = packageSmokeOwnership;
+        package-smoke-request-ownership = packageSmokeRequestOwnership;
         package-tool-lint = packageLint;
         package-tool-inputs =
           (pkgs.linkFarm "phoenix-package-tool-inputs" (
