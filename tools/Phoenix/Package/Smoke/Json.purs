@@ -1,6 +1,7 @@
 module Phoenix.Package.Smoke.Json where
 
 import Foreign.Object as Foreign.Object
+import Data.Maybe as Data.Maybe
 import Test.Deadline.Json as Test.Deadline.Json
 
 type Context =
@@ -26,4 +27,8 @@ type Ownership =
   , arguments :: Array String
   , environment :: Foreign.Object.Object String
   , stallCucumber :: Boolean
+  , interruptRequest :: Boolean
   }
+
+type Request = { id :: Int, label :: String, path :: String }
+type Response = { id :: Int, status :: Int, stdout :: String, stderr :: Data.Maybe.Maybe String }
