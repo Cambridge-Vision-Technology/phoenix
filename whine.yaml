@@ -1,7 +1,7 @@
 rulePackages:
   - whine-core
 include:
-  - tools/**/*.purs
+  - nix/tools/**/*.purs
 rules:
   UndesirableFunctions:
     functions:
