@@ -93,7 +93,7 @@
         _: entry:
         purs.purs {
           srcs = [
-            "${source entry.sources}/tools"
+            "${source entry.sources}/nix/tools"
           ]
           ++ map (directory: "${platformSource entry.platform}/${directory}") (
             entry.platformDirectories or (pkgs.lib.optional (entry.platform != [ ]) "tools")
@@ -536,7 +536,7 @@
         set -euo pipefail
         exec ${checkRunner} "$out" ${lintSource} ${
           inputs.purescript-whine.packages.${system}.default
-        }/bin/whine 'tools/**/*.purs'
+        }/bin/whine 'nix/tools/**/*.purs'
       '';
       pythonLintSource = source (
         pkgs.lib.concatMap (entry: entry.sources) (builtins.attrValues pythonToolInputs) ++ [ "whine.yaml" ]
@@ -545,7 +545,7 @@
         set -euo pipefail
         exec ${checkRunner} "$out" ${pythonLintSource} ${
           inputs.purescript-whine.packages.${system}.default
-        }/bin/whine 'tools/**/*.purs'
+        }/bin/whine 'nix/tools/**/*.purs'
       '';
       packageLintSource = source (
         pkgs.lib.concatMap (entry: entry.sources) (builtins.attrValues packageToolInputs)
@@ -555,7 +555,7 @@
         set -euo pipefail
         exec ${checkRunner} "$out" ${packageLintSource} ${
           inputs.purescript-whine.packages.${system}.default
-        }/bin/whine 'tools/**/*.purs'
+        }/bin/whine 'nix/tools/**/*.purs'
       '';
     in
     {
