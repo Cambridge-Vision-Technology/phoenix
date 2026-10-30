@@ -1,0 +1,22 @@
+{
+  "package-launcher": {
+    "module": "Phoenix.Package.Launcher",
+    "dependencies": ["prelude", "effect", "arrays", "exceptions", "node-process", "argonaut-codecs", "either", "maybe", "foreign-object"],
+    "sources": ["tools/Phoenix/Package/Launcher.purs", "tools/Platform/Node/Exec.purs", "tools/Platform/Node/Exec.js"],
+    "platform": ["tools/Platform/Node/Build.purs", "tools/Platform/Node/Build.js"]
+  },
+  "package-smoke-steps": {
+    "module": "Phoenix.Package.Smoke",
+    "dependencies": ["prelude", "effect", "aff", "aff-promise", "arrays", "exceptions", "node-process", "either", "maybe", "strings", "datetime", "argonaut-codecs", "foreign-object", "nullable", "foldable-traversable", "refs", "node-fs", "node-buffer", "integers", "numbers"],
+    "sources": ["tools/Phoenix/Package/Smoke.purs", "tools/Phoenix/Package/Smoke/Json.purs", "tools/Platform/Node/Port.purs", "tools/Platform/Node/Port.js"],
+    "platformDirectories": ["tools", "node", "testkit", "test-runner"],
+    "platform": ["tools/Build/Json.purs", "tools/Platform/Node/Build.purs", "tools/Platform/Node/Build.js", "node/Platform/Process/Node/Managed.purs", "node/Platform/Process/Node.purs", "node/Platform/Process/Group.purs", "node/Platform/Node/ManagedProcess.purs", "node/Platform/Node/ManagedProcess.js", "node/Platform/Node/System.purs", "node/Platform/Node/System.js", "tools/Platform/Node/Scenario.purs", "tools/Platform/Node/Scenario.js", "testkit/Test/Deadline.purs", "testkit/Test/Deadline/Json.purs", "testkit/Test/Process.purs", "test-runner/Platform/Node/ProcessControl.purs", "test-runner/Platform/Node/ProcessControl.js"]
+  },
+  "package-smoke-runner": {
+    "module": "Phoenix.Package.SmokeRunner",
+    "dependencies": ["prelude", "effect", "aff", "arrays", "exceptions", "node-process", "either", "maybe", "strings", "datetime", "argonaut-codecs", "foreign-object", "nullable", "foldable-traversable", "refs", "node-fs", "node-buffer", "integers", "numbers"],
+    "sources": ["tools/Phoenix/Package/SmokeRunner.purs", "tools/Phoenix/Package/Smoke/Json.purs"],
+    "platformDirectories": ["tools", "node", "testkit", "test-runner"],
+    "platform": ["tools/Build/Json.purs", "tools/Build/Output.purs", "tools/Platform/Node/Build.purs", "tools/Platform/Node/Build.js", "node/Platform/Process/Node/Managed.purs", "node/Platform/Process/Node.purs", "node/Platform/Process/Group.purs", "node/Platform/Node/ManagedProcess.purs", "node/Platform/Node/ManagedProcess.js", "node/Platform/Node/System.purs", "node/Platform/Node/System.js", "tools/Platform/Node/Scenario.purs", "tools/Platform/Node/Scenario.js", "testkit/Test/Deadline.purs", "testkit/Test/Deadline/Json.purs", "testkit/Test/Process.purs", "test-runner/Platform/Node/ProcessControl.purs", "test-runner/Platform/Node/ProcessControl.js"]
+  }
+}

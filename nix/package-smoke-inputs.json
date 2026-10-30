@@ -1,0 +1,5 @@
+{
+  "dependencies": ["nix/package-smoke/package.json", "nix/package-smoke/package-lock.json"],
+  "feature": ["features/native-package.feature"],
+  "registration": ["features/native-package.mjs"]
+}
