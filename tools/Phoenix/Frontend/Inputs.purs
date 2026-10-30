@@ -26,6 +26,7 @@ import Effect.Ref as Effect.Ref
 import Foreign.Object as Foreign.Object
 import Node.Path as Node.Path
 import Node.Process as Node.Process
+import Phoenix.Frontend.Inputs.Computed as Phoenix.Frontend.Inputs.Computed
 import Phoenix.Frontend.Inputs.Json as Phoenix.Frontend.Inputs.Json
 import Platform.Node.Build as Platform.Node.Build
 import Platform.Node.Frontend as Platform.Node.Frontend
@@ -88,8 +89,8 @@ configClosure root path = do
       parents <- configClosure root resolved
       pure ([ path ] <> parents)
 
-discover :: String -> String -> Phoenix.Frontend.Inputs.Json.Assets -> Data.Argonaut.Core.Json -> Effect.Effect Phoenix.Frontend.Inputs.Json.Graph
-discover root pnpm assets vite = do
+discover :: Phoenix.Frontend.Inputs.Computed.Inspector -> String -> String -> Phoenix.Frontend.Inputs.Json.Assets -> Data.Argonaut.Core.Json -> Effect.Effect Phoenix.Frontend.Inputs.Json.Graph
+discover computed root pnpm assets vite = do
   Node.Process.chdir (root <> "/js")
   workspaces <- workspaceClosure pnpm
   manifests <- Data.Traversable.traverse (\workspace -> relative root (workspace.path <> "/package.json")) workspaces
@@ -136,6 +137,7 @@ discover root pnpm assets vite = do
   seen <- Effect.Ref.new Data.Set.empty
   edges <- Effect.Ref.new []
   moduleAssets <- Effect.Ref.new []
+  computedAssets <- Effect.Ref.new []
   viteResolve <- field "resolve" vite :: Effect.Effect Data.Argonaut.Core.Json
   aliases <- field "alias" viteResolve :: Effect.Effect (Array Data.Argonaut.Core.Json)
   aliasPairs <- Data.Traversable.traverse
@@ -164,6 +166,7 @@ discover root pnpm assets vite = do
         require present ("Missing build input: " <> path)
         Effect.Ref.modify_ (Data.Set.insert path) seen
         text <- Platform.Node.Build.readImpl (root <> "/" <> path)
+        computedSites <- computed.check path text
         imports <- Platform.Node.Frontend.importsImpl text
         when (Data.String.Utils.endsWith ".css" path || Data.String.Utils.endsWith ".grammar" path) do
           require (not (Data.Foldable.any (\marker -> Data.String.contains (Data.String.Pattern marker) text) [ "url(", "@external" ])) ("Unsupported computed frontend asset reference: " <> path)
@@ -209,12 +212,34 @@ discover root pnpm assets vite = do
                       when (request /= plain) (Effect.Ref.modify_ (_ <> [ resolved ]) moduleAssets)
           )
           (imports.importedFiles <> imports.referencedFiles)
+        observedImports <- Effect.Ref.read edges
+        Data.Foldable.traverse_
+          ( \site -> case site of
+              Phoenix.Frontend.Inputs.Computed.ImportedWorkerURL value -> do
+                imported <- Data.Maybe.maybe (Effect.Exception.throw ("Unsupported Vite computed asset worker URL in " <> path <> ": " <> value.expression <> " -> " <> value.request)) pure
+                  (Data.Array.find (\edge -> edge.from == path && edge.request == value.request && Data.Array.elem edge.target assets.moduleFiles) observedImports)
+                Effect.Ref.modify_ (_ <> [ { from: path, expression: value.expression, request: value.request, target: imported.target, form: "imported-worker-url" } ]) computedAssets
+              Phoenix.Frontend.Inputs.Computed.LiteralURL value -> do
+                absolute <- Node.Path.resolve [ root, Node.Path.dirname path ] value.request
+                let
+                  target = Node.Path.relative root absolute
+                  declared = assets.moduleFiles <> assets.publicFiles <> map _.input assets.generators
+                require (target /= "" && not (Data.String.Utils.startsWith ".." target) && not (Node.Path.isAbsolute target)) ("Unsupported Vite computed asset new URL in " <> path <> ": " <> value.expression <> " -> asset outside frontend root " <> absolute)
+                require (Data.Array.elem target declared) ("Unsupported Vite computed asset new URL in " <> path <> ": " <> value.expression <> " -> undeclared asset " <> target)
+                Platform.Node.Build.existsImpl (root <> "/" <> target) >>= flip require ("Missing Vite computed URL asset in " <> path <> ": " <> value.expression <> " -> " <> target)
+                Effect.Ref.modify_ (Data.Set.insert target) seen
+                when (Data.Array.elem target assets.moduleFiles) (Effect.Ref.modify_ (_ <> [ target ]) moduleAssets)
+                Effect.Ref.modify_ (_ <> [ { from: path, request: value.request, target } ]) edges
+                Effect.Ref.modify_ (_ <> [ { from: path, expression: value.expression, request: value.request, target, form: "literal-url" } ]) computedAssets
+          )
+          computedSites
   visit "js/.pnpmfile.cjs" app.options
   dependencyModules <- Data.Set.toUnfoldable <$> Effect.Ref.read seen :: Effect.Effect (Array String)
   Data.Foldable.traverse_ (\project -> Data.Foldable.traverse_ (\path -> unless (generated assets path) (visit path project.options)) project.files) parsed
   Data.Foldable.traverse_ (\path -> unless (generated assets path) (visit path app.options)) (roots <> [ "js/app/vite.config.mts", "js/app/relay.config.js" ])
   observedEdges <- Effect.Ref.read edges
   observedAssets <- canonical <$> Effect.Ref.read moduleAssets
+  observedComputed <- Effect.Ref.read computedAssets
   require (canonical observedAssets == canonical assets.moduleFiles) ("Module asset declaration mismatch: " <> show { missing: Data.Array.difference assets.moduleFiles observedAssets, added: Data.Array.difference observedAssets assets.moduleFiles })
   require (canonical (map _.manifest assets.generators) == canonical (map _.manifest (Data.Array.filter (\recipe -> Foreign.Object.member "generate" recipe.scripts) assets.recipes))) "Computed build asset declarations do not cover the generator recipes"
   Data.Foldable.traverse_
@@ -235,7 +260,7 @@ discover root pnpm assets vite = do
   let
     dependencies = canonical (manifests <> dependencyModules <> [ "js/package.json", "js/.npmrc", "js/pnpm-lock.yaml", "js/pnpm-workspace.yaml" ])
     sources = Data.Array.difference (canonical (Data.Array.filter (not <<< generated assets) importedFiles <> configFiles <> viteFiles <> publicFiles <> map _.input assets.generators <> [ "js/app/relay.config.js", "js/app/schema.graphql" ])) dependencies
-  pure { inventory: { dependencies, sources }, workspaces, edges: observedEdges, configs: configFiles, roots, publicDirectory, publicFiles: canonical publicFiles, moduleAssets: observedAssets, generators: assets.generators }
+  pure { inventory: { dependencies, sources }, workspaces, edges: observedEdges, configs: configFiles, roots, publicDirectory, publicFiles: canonical publicFiles, moduleAssets: observedAssets, computedAssets: observedComputed, generators: assets.generators }
 
 validate :: Phoenix.Frontend.Inputs.Json.Inventory -> Phoenix.Frontend.Inputs.Json.Inventory -> Effect.Effect Unit
 validate expected actual = do
@@ -259,8 +284,8 @@ reject label path action = do
     Data.Either.Right _ ->
       Effect.Exception.throw ("Negative control was accepted: " <> label)
 
-controls :: String -> String -> Phoenix.Frontend.Inputs.Json.Assets -> Data.Argonaut.Core.Json -> Phoenix.Frontend.Inputs.Json.Inventory -> Phoenix.Frontend.Inputs.Json.Graph -> String -> Effect.Effect Unit
-controls output root assets vite expected graph pnpm = do
+controls :: Phoenix.Frontend.Inputs.Computed.Inspector -> String -> String -> Phoenix.Frontend.Inputs.Json.Assets -> Data.Argonaut.Core.Json -> Phoenix.Frontend.Inputs.Json.Inventory -> Phoenix.Frontend.Inputs.Json.Graph -> String -> Effect.Effect Unit
+controls computed output root assets vite expected graph pnpm = do
   let
     added = "js/app/frontendInventoryControl.ts"
     missing = "js/app/src/index.tsx"
@@ -269,17 +294,34 @@ controls output root assets vite expected graph pnpm = do
   originalEntry <- Platform.Node.Build.readImpl (root <> "/" <> missing)
   Platform.Node.Build.writeImpl (root <> "/" <> added) "export {};\n"
   Platform.Node.Build.writeImpl (root <> "/" <> missing) (originalEntry <> "\nimport \"../frontendInventoryControl\";\n")
-  addedGraph <- discover root pnpm assets vite
+  addedGraph <- discover computed root pnpm assets vite
   require (Data.Foldable.any (\edge -> edge.from == missing && edge.target == added) addedGraph.edges) "Added-source control did not traverse the actual import edge"
   addedResult <- reject "added source omitted from inventory" added (validate expected addedGraph.inventory)
   Platform.Node.Build.writeImpl (root <> "/" <> missing) originalEntry
   missingResult <- reject "missing existing source entry" missing (validate (expected { sources = Data.Array.filter (_ /= missing) expected.sources }) graph.inventory)
   Platform.Node.Build.writeImpl (root <> "/" <> unused) "export {};\n"
-  unusedGraph <- discover root pnpm assets vite
+  unusedGraph <- discover computed root pnpm assets vite
   unusedResult <- reject "unused existing source entry" unused (validate (expected { sources = expected.sources <> [ unused ] }) unusedGraph.inventory)
+  let
+    sourceAsset = "js/app/src/vite-computed-control.svg"
+  Platform.Node.Build.writeImpl (root <> "/" <> sourceAsset) "<svg xmlns=\"http://www.w3.org/2000/svg\"/>\n"
+  Platform.Node.Build.writeImpl (root <> "/" <> missing) (originalEntry <> "\nconst inventoryURL = new URL('./vite-computed-control.svg', import.meta.url);\n")
+  urlResult <- reject "literal Vite URL source-tree asset" "vite-computed-control.svg" (void (discover computed root pnpm assets vite))
+  require (Data.String.contains (Data.String.Pattern ("Unsupported Vite computed asset new URL in " <> missing)) urlResult) "Literal Vite URL control was not rejected by the finite-form guard"
+  literalGraph <- discover computed root pnpm (assets { moduleFiles = assets.moduleFiles <> [ sourceAsset ] }) vite
+  require (Data.Foldable.any (\site -> site.from == missing && site.target == sourceAsset && site.form == "literal-url") literalGraph.computedAssets) "Declared literal Vite URL was not discovered from syntax"
+  literalResult <- reject "declared literal Vite URL omitted from inventory" sourceAsset (validate expected literalGraph.inventory)
+  Platform.Node.Build.writeImpl (root <> "/" <> missing) (originalEntry <> "\nconst inventoryGlob = import.meta.glob('./vite-computed-control.svg');\n")
+  globResult <- reject "literal Vite glob source-tree asset" "vite-computed-control.svg" (void (discover computed root pnpm assets vite))
+  require (Data.String.contains (Data.String.Pattern ("Unsupported Vite computed asset import.meta.glob in " <> missing)) globResult) "Literal Vite glob control was not rejected by the finite-form guard"
+  Platform.Node.Build.writeImpl (root <> "/" <> missing) originalEntry
+  dynamicURL <- reject "unsupported computed Vite URL" missing (void (computed.check missing "const path = './vite-computed-control.svg'; new URL(path, import.meta.url);"))
+  dynamicGlob <- reject "unsupported computed Vite glob" missing (void (computed.check missing "const pattern = './vite-computed-control.svg'; import.meta.glob(pattern);"))
+  nonCode <- computed.check missing "// new URL('./example.svg', import.meta.url)\nconst text = \"import.meta.glob('./example.svg')\";"
+  require (Data.Array.null nonCode) "Vite computed-asset guard treated a comment/string as executable syntax"
   Platform.Node.Build.writeImpl (root <> "/" <> public) "computed-path public asset rejection control\n"
-  publicResult <- reject "computed public asset omitted from declarations" public (void (discover root pnpm assets vite))
-  Platform.Node.Build.writeImpl (output <> "/controls.json") (Data.Argonaut.Core.stringifyWithIndent 2 (Data.Argonaut.Encode.encodeJson { added: { path: added, rejected: true, message: addedResult }, missing: { path: missing, rejected: true, message: missingResult }, unused: { path: unused, rejected: true, message: unusedResult }, computedAsset: { path: public, rejected: true, message: publicResult } }) <> "\n")
+  publicResult <- reject "computed public asset omitted from declarations" public (void (discover computed root pnpm assets vite))
+  Platform.Node.Build.writeImpl (output <> "/controls.json") (Data.Argonaut.Core.stringifyWithIndent 2 (Data.Argonaut.Encode.encodeJson { added: { path: added, rejected: true, message: addedResult }, missing: { path: missing, rejected: true, message: missingResult }, unused: { path: unused, rejected: true, message: unusedResult }, computedAsset: { path: public, rejected: true, message: publicResult }, viteURL: { source: missing, asset: sourceAsset, rejected: true, message: urlResult }, declaredLiteralURL: { source: missing, asset: sourceAsset, discovered: true, rejected: true, message: literalResult }, viteGlob: { source: missing, asset: sourceAsset, rejected: true, message: globResult }, dynamicURL: { rejected: true, message: dynamicURL }, dynamicGlob: { rejected: true, message: dynamicGlob }, nonCodeIgnored: true }) <> "\n")
 
 main :: Effect.Effect Unit
 main = Effect.Aff.launchAff_ do
@@ -292,17 +334,19 @@ main = Effect.Aff.launchAff_ do
       assets <- Effect.Class.liftEffect (Build.Json.readSync declarationPath) :: Effect.Aff.Aff Phoenix.Frontend.Inputs.Json.Assets
       vite <- Control.Promise.toAffE (Platform.Node.Frontend.viteConfigImpl (root <> "/js/app/package.json") (Data.Argonaut.Encode.encodeJson { configFile: root <> "/js/app/vite.config.mts" }))
       Effect.Class.liftEffect do
-        graph <- discover root pnpm assets vite
+        computed <- Phoenix.Frontend.Inputs.Computed.inspector
+        graph <- discover computed root pnpm assets vite
         Platform.Node.Build.mkdirImpl output
         Platform.Node.Build.writeImpl (output <> "/inventory.json") (Data.Argonaut.Core.stringifyWithIndent 2 (Data.Argonaut.Encode.encodeJson graph.inventory) <> "\n")
         Platform.Node.Build.writeImpl (output <> "/graph.json") (Data.Argonaut.Core.stringifyWithIndent 2 (Data.Argonaut.Encode.encodeJson graph) <> "\n")
         when (mode == "check") do
           expected <- Build.Json.readSync inventoryPath
           validate expected graph.inventory
-          controls output root assets vite expected graph pnpm
+          controls computed output root assets vite expected graph pnpm
         require (Data.Array.elem mode [ "check", "generate" ]) "Unknown frontend product-input operation"
         finished <- Node.Process.uptime
+        computedSyntax <- computed.statistics
         require (finished - started < 60.0) "Frontend product-input validation exceeded 60 seconds"
-        Platform.Node.Build.writeImpl (output <> "/receipt.json") (Data.Argonaut.Core.stringifyWithIndent 2 (Data.Argonaut.Encode.encodeJson { mode, validated: mode == "check", sourceCount: Data.Array.length graph.inventory.sources, dependencyCount: Data.Array.length graph.inventory.dependencies, importEdges: Data.Array.length graph.edges, publicAssets: Data.Array.length graph.publicFiles, elapsedSeconds: finished - started }) <> "\n")
+        Platform.Node.Build.writeImpl (output <> "/receipt.json") (Data.Argonaut.Core.stringifyWithIndent 2 (Data.Argonaut.Encode.encodeJson { mode, validated: mode == "check", sourceCount: Data.Array.length graph.inventory.sources, dependencyCount: Data.Array.length graph.inventory.dependencies, importEdges: Data.Array.length graph.edges, publicAssets: Data.Array.length graph.publicFiles, computedAssets: Data.Array.length graph.computedAssets, computedSyntax, elapsedSeconds: finished - started }) <> "\n")
     _ ->
       Effect.Class.liftEffect (Effect.Exception.throw "Expected frontend product-input operation and declared inputs")
