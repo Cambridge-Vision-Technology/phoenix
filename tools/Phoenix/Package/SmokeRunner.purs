@@ -53,6 +53,7 @@ run output contextPath stallCucumber = do
   rootReference <- Effect.Class.liftEffect (Effect.Ref.new Data.Maybe.Nothing)
   portsReference <- Effect.Class.liftEffect (Effect.Ref.new Data.Maybe.Nothing)
   cleanupReference <- Effect.Class.liftEffect (Effect.Ref.new false)
+  progressReference <- Effect.Class.liftEffect (Effect.Ref.new Data.Maybe.Nothing)
   spawnFailure <- Effect.Class.liftEffect (Effect.Ref.new Data.Maybe.Nothing)
   let
     runtime = { policy: context.policy, started, scenario: "Start the native Phoenix package offline", report: output, timeout: context.timeout }
@@ -84,6 +85,8 @@ run output contextPath stallCucumber = do
       serverSurvivors <- Data.Maybe.maybe (pure []) Test.Process.group server
       cucumberSurvivors <- Data.Maybe.maybe (pure []) Test.Process.group cucumber
       Effect.Class.liftEffect (Effect.Ref.write true cleanupReference)
+      progress <- Node.FS.Aff.readTextFile Node.Encoding.UTF8 (output <> "/progress.json")
+      Effect.Class.liftEffect (Effect.Ref.write (Data.Maybe.Just progress) progressReference)
       finished <- Effect.Class.liftEffect Test.Deadline.now
       Build.Json.write (output <> "/cleanup.json") { server, cucumber, serverSurvivors, cucumberSurvivors, root, stateExists, httpAndGrpcPortsRebound: true, ownedProcessesTerminated: true, elapsedMs: finished - started }
     work = do
@@ -174,15 +177,18 @@ run output contextPath stallCucumber = do
     failure = Data.Either.either (Data.Maybe.Just <<< Effect.Exception.message) (const Data.Maybe.Nothing) outcome
   Build.Json.write (output <> "/receipt.json") { accepted: Data.Either.isRight outcome, selected: 1, package: context.package, launcher: context.package <> "/bin/phoenix", elapsedMs: finished - started, limitMs: context.policy.singleMilliseconds, subprocessCleanupComplete: cleaned, stallCucumber, failure, concurrency: 1, node: Node.Process.version }
   when (Data.Either.isLeft outcome)
-    ( Effect.Class.liftEffect do
-        Data.Foldable.traverse_
-          ( \name -> do
-              exists <- Platform.Node.Build.existsImpl (output <> "/" <> name)
-              when exists do
-                receipt <- Platform.Node.Build.readImpl (output <> "/" <> name)
-                Build.Output.writeLine Node.Process.stderr (name <> ": " <> receipt) (pure unit)
-          )
-          [ "progress.json", "interruption-observed.json", "cleanup.json", "receipt.json" ]
+    ( do
+        progress <- Effect.Class.liftEffect (Effect.Ref.read progressReference)
+        Data.Foldable.traverse_ (Node.FS.Aff.writeTextFile Node.Encoding.UTF8 (output <> "/failure-progress.json")) progress
+        Effect.Class.liftEffect do
+          Data.Foldable.traverse_
+            ( \name -> do
+                exists <- Platform.Node.Build.existsImpl (output <> "/" <> name)
+                when exists do
+                  receipt <- Platform.Node.Build.readImpl (output <> "/" <> name)
+                  Build.Output.writeLine Node.Process.stderr (name <> ": " <> receipt) (pure unit)
+            )
+            [ "failure-progress.json", "progress.json", "interruption-observed.json", "cleanup.json", "receipt.json" ]
     )
   assert "Smoke did not clean all outer-owned resources within its deadline" (cleaned && finished - started < Data.Int.toNumber context.policy.singleMilliseconds)
   if stallCucumber then do
