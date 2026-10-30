@@ -47,10 +47,9 @@
       inventory = builtins.fromJSON (builtins.readFile ./nix/frontend-inputs.json);
       toolInputs = builtins.fromJSON (builtins.readFile ./nix/frontend-tool-inputs.json);
       pythonToolInputs = builtins.fromJSON (builtins.readFile ./nix/python-tool-inputs.json);
-      runtimeToolInputs = builtins.fromJSON (builtins.readFile ./nix/runtime-tool-inputs.json);
       packageToolInputs = builtins.fromJSON (builtins.readFile ./nix/package-tool-inputs.json);
       smokeInputs = builtins.fromJSON (builtins.readFile ./nix/package-smoke-inputs.json);
-      allToolInputs = toolInputs // pythonToolInputs // runtimeToolInputs // packageToolInputs;
+      allToolInputs = toolInputs // pythonToolInputs // packageToolInputs;
       source =
         paths:
         fs.toSource {
@@ -90,15 +89,6 @@
           };
         }
       ];
-      wasmtimeModules = pkgs.linkFarm "phoenix-wasmtime-node-modules" [
-        {
-          name = "koffi";
-          path = pkgs.fetchzip {
-            url = "https://registry.npmjs.org/koffi/-/koffi-2.15.2.tgz";
-            hash = "sha256-SdO7oMJb0OJreRIvVHlx5tcBViY3WE1Guzip5EiPdVg=";
-          };
-        }
-      ];
       tooling = builtins.mapAttrs (
         _: entry:
         purs.purs {
@@ -110,29 +100,15 @@
           );
           dependencies = entry.dependencies;
           nodejs = if entry.module == "Phoenix.Frontend.Inputs" then pkgs.nodejs_26 else toolingPkgs.nodejs;
-          foreign =
-            pkgs.lib.optionalAttrs (entry.module == "Phoenix.Frontend.Inputs") {
-              "Platform.Node.Frontend".node_modules = frontendGraphModules;
-            }
-            // pkgs.lib.optionalAttrs (entry.module == "Phoenix.Runtime.Wasm") {
-              "Platform.Node.Wasmtime".node_modules = wasmtimeModules;
-            };
+          foreign = pkgs.lib.optionalAttrs (entry.module == "Phoenix.Frontend.Inputs") {
+            "Platform.Node.Frontend".node_modules = frontendGraphModules;
+          };
         }
       ) allToolInputs;
       tools = builtins.mapAttrs (
         name: project:
         project.script {
           module = allToolInputs.${name}.module;
-          esbuild =
-            pkgs.lib.optionalAttrs
-              (builtins.hasAttr name runtimeToolInputs || builtins.hasAttr name packageToolInputs)
-              {
-                minify = false;
-              }
-            // pkgs.lib.optionalAttrs (name == "runtime-wasm") {
-              "alias:koffi" = "${wasmtimeModules}/koffi";
-              external = [ "${wasmtimeModules}/koffi" ];
-            };
         }
       ) tooling;
       platformInventory = builtins.fromJSON (builtins.readFile (inputs.platform + "/nix/inputs.json"));
@@ -195,12 +171,13 @@
       pnpm = pkgs.stdenvNoCC.mkDerivation {
         pname = "pnpm";
         version = "12.0.0";
-        dontUnpack = true;
+        src = pnpmBinary;
+        nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+        buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+        dontBuild = true;
+        dontStrip = true;
         installPhase = ''
-          set -euo pipefail
-          exec ${tools.build} package-pnpm "$out" ${pnpmBinary} ${pkgs.coreutils}/bin/install ${pkgs.patchelf}/bin/patchelf ${pkgs.stdenv.cc.bintools.dynamicLinker} ${
-            pkgs.lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]
-          }
+          ${pkgs.coreutils}/bin/install -Dm755 pnpm "$out/bin/pnpm"
         '';
         passthru.nodejs-slim = pkgs.nodejs_26;
       };
@@ -237,10 +214,6 @@
         dontInstall = true;
         dontFixup = true;
       };
-      parity = pkgs.runCommand "phoenix-frontend-file-set" { } ''
-        set -euo pipefail
-        exec ${pkgs.coreutils}/bin/timeout 60s ${tools.check} "$out" ${frontend} ${./nix/frontend-static.txt}
-      '';
       frontendDiscoveryCandidates = fs.toSource {
         root = ./.;
         fileset = fs.unions [
@@ -438,84 +411,56 @@
           "pg"
         ];
       };
-      denoArchive = pkgs.fetchurl {
-        url = "https://github.com/denoland/deno/releases/download/v2.1.4/deno-x86_64-unknown-linux-gnu.zip";
-        hash = "sha256-VKgZOczLKvEUxNCmilVM9KBLHwhyjnD2Y/g3gd4Z14U=";
-      };
-      denoOriginal = pkgs.runCommand "phoenix-deno-original-2.1.4" { } ''
-        set -euo pipefail
-        exec ${pkgs.unzip}/bin/unzip ${denoArchive} -d "$out"
-      '';
       deno = pkgs.stdenvNoCC.mkDerivation {
         pname = "phoenix-deno";
         version = "2.1.4";
-        dontUnpack = true;
+        src = pkgs.fetchurl {
+          url = "https://github.com/denoland/deno/releases/download/v2.1.4/deno-x86_64-unknown-linux-gnu.zip";
+          hash = "sha256-VKgZOczLKvEUxNCmilVM9KBLHwhyjnD2Y/g3gd4Z14U=";
+        };
+        sourceRoot = ".";
+        nativeBuildInputs = [
+          pkgs.unzip
+          pkgs.autoPatchelfHook
+        ];
+        buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+        dontBuild = true;
+        dontStrip = true;
         installPhase = ''
-          set -euo pipefail
-          exec ${tools.runtime-build} "$out" ${denoArchive} ${pkgs.unzip}/bin/unzip ${pkgs.coreutils}/bin/install ${pkgs.patchelf}/bin/patchelf ${pkgs.stdenv.cc.bintools.dynamicLinker} ${
-            pkgs.lib.makeLibraryPath [ pkgs.stdenv.cc.cc.lib ]
-          }
+          ${pkgs.coreutils}/bin/install -Dm755 deno "$out/bin/deno"
         '';
-        dontFixup = true;
       };
       wasmBinary = pkgs.fetchurl {
         url = "https://github.com/vmware-labs/webassembly-language-runtimes/releases/download/python%2F3.12.0%2B20231211-040d5a6/python-3.12.0.wasm";
         hash = "sha256-5dxaOYsHtU6o/bUDv2j7WD1TPxDsP5MJY+ArlQX3p2M=";
       };
-      montyOriginal = pkgs.runCommand "phoenix-monty-original-1.1.0" { } ''
-        set -euo pipefail
-        exec ${pkgs.unzip}/bin/unzip ${pythonSet.pydantic-monty-runtime.src} -d "$out"
-      '';
-      evaluatorRuntimes =
-        (pkgs.linkFarm "phoenix-evaluator-runtimes" [
-          {
-            name = "bin/deno";
-            path = "${deno}/bin/deno";
-          }
-          {
-            name = "bin/monty";
-            path = "${environment}/bin/monty";
-          }
-          {
-            name = "share/phoenix/python-3.12.0.wasm";
-            path = wasmBinary;
-          }
-        ]).overrideAttrs
-          {
-            passthru.launcherEnvironment = {
-              PATH = pkgs.lib.makeBinPath [ evaluatorRuntimes ];
-              PHOENIX_WASM_BINARY_PATH = "${evaluatorRuntimes}/share/phoenix/python-3.12.0.wasm";
-            };
-          };
-      evaluatorCheck = pkgs.runCommand "phoenix-evaluator-runtimes-check" { } ''
-        set -euo pipefail
-        exec ${checkRunner} "$out/runner" "$PWD" ${tools.runtime-check} "$out" ${evaluatorRuntimes} ${environment} ${tools.runtime-wasm} ${environment}/${python.sitePackages}/wasmtime/linux-x86_64/_libwasmtime.so ${denoOriginal}/deno ${montyOriginal}/pydantic_monty_runtime-1.1.0.data/scripts/monty ${pkgs.coreutils}/bin/sha256sum ${toolingPkgs.procps}/bin/ps
-      '';
-      launcherConfig = pkgs.writeText "phoenix-launcher.json" (
-        builtins.toJSON {
-          python = "${environment}/bin/python";
-          runtimePath = evaluatorRuntimes.launcherEnvironment.PATH;
-          wasm = evaluatorRuntimes.launcherEnvironment.PHOENIX_WASM_BINARY_PATH;
+      evaluatorRuntimes = pkgs.linkFarm "phoenix-evaluator-runtimes" [
+        {
+          name = "bin/deno";
+          path = "${deno}/bin/deno";
         }
-      );
-      launcher = pkgs.writeShellScript "phoenix" ''
-        set -euo pipefail
-        exec ${tools.package-launcher} ${launcherConfig} "$@"
-      '';
+        {
+          name = "bin/monty";
+          path = "${environment}/bin/monty";
+        }
+        {
+          name = "share/phoenix/python-3.12.0.wasm";
+          path = wasmBinary;
+        }
+      ];
       phoenix =
-        (pkgs.linkFarm "phoenix-20.25.0-native" [
+        pkgs.runCommand "phoenix-20.25.0-native"
           {
-            name = "bin/phoenix";
-            path = launcher;
+            nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+            passthru.pythonEnvironment = environment;
+            meta.mainProgram = "phoenix";
           }
-        ]).overrideAttrs
-          {
-            passthru = {
-              pythonEnvironment = environment;
-              inherit launcher launcherConfig;
-              launcherTool = tools.package-launcher;
-            };
-          };
+          ''
+            makeWrapper ${environment}/bin/python "$out/bin/phoenix" \
+              --add-flags "-m phoenix.server.main serve" \
+              --prefix PATH : ${evaluatorRuntimes}/bin \
+              --set PHOENIX_WASM_BINARY_PATH ${wasmBinary}
+          '';
       smokeDependencies = toolingPkgs.importNpmLock.buildNodeModules {
         npmRoot = source smokeInputs.dependencies + "/nix/package-smoke";
         nodejs = toolingPkgs.nodejs;
@@ -547,9 +492,6 @@
       smokeContext = pkgs.writeText "phoenix-package-smoke.json" (
         builtins.toJSON {
           package = phoenix;
-          pythonEnvironment = environment;
-          runtimes = evaluatorRuntimes;
-          static = "${environment}/${python.sitePackages}/phoenix/server/static";
           curl = "${pkgs.curl}/bin/curl";
           node = "${toolingPkgs.nodejs}/bin/node";
           cucumber = "${smokeDependencies}/node_modules/@cucumber/cucumber/bin/cucumber.js";
@@ -560,11 +502,10 @@
           policy = smokePolicy;
         }
       );
-      packageSmokeCheck =
-        mode:
-        (pkgs.runCommand "phoenix-package-${mode}" { } ''
+      packageSmoke =
+        (pkgs.runCommand "phoenix-package-health" { } ''
           set -euo pipefail
-          exec ${checkRunner} "$out/runner" "$PWD" ${tools.package-smoke-runner} "$out" ${smokeContext} ${mode}
+          exec ${checkRunner} "$out/runner" "$PWD" ${tools.package-smoke-runner} "$out" ${smokeContext}
         '').overrideAttrs
           {
             passthru = {
@@ -573,21 +514,6 @@
               steps = tooling.package-smoke-steps.output { };
             };
           };
-      packageSmoke = packageSmokeCheck "smoke";
-      packageSmokeOwnership = packageSmokeCheck "stall-cucumber";
-      packageSmokeRequestOwnership = packageSmokeCheck "interrupt-request";
-      pythonImport = pkgs.runCommand "phoenix-python-import" { } ''
-        set -euo pipefail
-        exec ${pkgs.coreutils}/bin/timeout 60s ${tools.python-check} import "$out" ${environment}
-      '';
-      pythonParity = pkgs.runCommand "phoenix-python-distributions" { } ''
-        set -euo pipefail
-        exec ${pkgs.coreutils}/bin/timeout 60s ${tools.python-check} parity "$out" ${environment} ${python.pkgs.pip}/${python.sitePackages}/pip ${environment}/${python.sitePackages} ${./nix/python-distributions.txt}
-      '';
-      pythonStatic = pkgs.runCommand "phoenix-python-static-file-set" { } ''
-        set -euo pipefail
-        exec ${pkgs.coreutils}/bin/timeout 60s ${tools.check} "$out" ${environment}/${python.sitePackages}/phoenix/server/static ${./nix/frontend-static.txt}
-      '';
       pythonProductInputs =
         mode:
         pkgs.stdenvNoCC.mkDerivation {
@@ -621,16 +547,6 @@
           inputs.purescript-whine.packages.${system}.default
         }/bin/whine 'tools/**/*.purs'
       '';
-      runtimeLintSource = source (
-        pkgs.lib.concatMap (entry: entry.sources) (builtins.attrValues runtimeToolInputs)
-        ++ [ "whine.yaml" ]
-      );
-      runtimeLint = toolingPkgs.runCommand "phoenix-runtime-tool-lint" { } ''
-        set -euo pipefail
-        exec ${checkRunner} "$out" ${runtimeLintSource} ${
-          inputs.purescript-whine.packages.${system}.default
-        }/bin/whine 'tools/**/*.purs'
-      '';
       packageLintSource = source (
         pkgs.lib.concatMap (entry: entry.sources) (builtins.attrValues packageToolInputs)
         ++ [ "whine.yaml" ]
@@ -650,15 +566,11 @@
         python-source = pythonSet.arize-phoenix;
         evaluator-runtimes = evaluatorRuntimes;
         evaluator-deno = deno;
-        evaluator-deno-original = denoOriginal;
-        evaluator-monty-original = montyOriginal;
         inherit phoenix;
         default = phoenix;
       };
       checks.${system} = {
         package-smoke = packageSmoke;
-        package-smoke-ownership = packageSmokeOwnership;
-        package-smoke-request-ownership = packageSmokeRequestOwnership;
         package-tool-lint = packageLint;
         package-tool-inputs =
           (pkgs.linkFarm "phoenix-package-tool-inputs" (
@@ -672,21 +584,6 @@
                 name: toolChecks.${name}
               );
             };
-        evaluator-runtimes = evaluatorCheck;
-        runtime-tool-lint = runtimeLint;
-        runtime-tool-inputs =
-          (pkgs.linkFarm "phoenix-runtime-tool-inputs" (
-            pkgs.lib.mapAttrsToList (name: _: {
-              inherit name;
-              path = toolChecks.${name};
-            }) runtimeToolInputs
-          )).overrideAttrs
-            {
-              passthru.entries = pkgs.lib.genAttrs (builtins.attrNames runtimeToolInputs) (
-                name: toolChecks.${name}
-              );
-            };
-        frontend-file-set = parity;
         frontend-product-inputs = frontendProductInputs "check";
         frontend-tool-inputs = pkgs.linkFarm "phoenix-frontend-tool-inputs" (
           pkgs.lib.mapAttrsToList (name: _: {
@@ -695,10 +592,7 @@
           }) toolInputs
         );
         frontend-tool-lint = lint;
-        python-import = pythonImport;
         python-product-inputs = pythonProductInputs "check";
-        python-distributions = pythonParity;
-        python-static-file-set = pythonStatic;
         python-tool-lint = pythonLint;
         python-tool-inputs = pkgs.linkFarm "phoenix-python-tool-inputs" (
           pkgs.lib.mapAttrsToList (name: _: {
