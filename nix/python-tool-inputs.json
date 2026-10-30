@@ -2,7 +2,7 @@
   "python-inputs": {
     "module": "Phoenix.Python.Inputs",
     "dependencies": ["prelude", "effect", "arrays", "exceptions", "strings", "stringutils", "foldable-traversable", "argonaut-codecs", "node-process", "nullable", "maybe", "either", "aff", "node-fs", "node-buffer", "node-path", "ordered-collections", "refs", "integers", "tailrec"],
-    "sources": ["tools/Phoenix/Python/Inputs.purs", "tools/Phoenix/Python/Inputs/Json.purs"],
+    "sources": ["nix/tools/Phoenix/Python/Inputs.purs", "nix/tools/Phoenix/Python/Inputs/Json.purs"],
     "platform": ["tools/Build/Json.purs", "tools/Platform/Node/Build.purs", "tools/Platform/Node/Build.js", "tools/Platform/Node/Inventory.purs", "tools/Platform/Node/Inventory.js"]
   }
 }
