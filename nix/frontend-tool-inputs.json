@@ -14,7 +14,7 @@
   "inputs": {
     "module": "Phoenix.Frontend.Inputs",
     "dependencies": ["prelude", "effect", "aff", "aff-promise", "arrays", "exceptions", "strings", "stringutils", "foldable-traversable", "argonaut-codecs", "argonaut-core", "foreign-object", "ordered-collections", "node-process", "node-path", "node-fs", "nullable", "maybe", "refs"],
-    "sources": ["tools/Phoenix/Frontend/Inputs.purs", "tools/Phoenix/Frontend/Inputs/Json.purs", "tools/Platform/Node/Frontend.purs", "tools/Platform/Node/Frontend.js"],
+    "sources": ["tools/Phoenix/Frontend/Inputs.purs", "tools/Phoenix/Frontend/Inputs/Computed.purs", "tools/Phoenix/Frontend/Inputs/Json.purs", "tools/Platform/Node/Frontend.purs", "tools/Platform/Node/Frontend.js"],
     "platform": [
       "tools/Platform/Node/Build.purs",
       "tools/Platform/Node/Build.js",
