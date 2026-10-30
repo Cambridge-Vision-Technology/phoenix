@@ -49,6 +49,8 @@ jobs:
       - name: Install upstream unit-test environment
         # Equivalent to tox unit_tests. Keep pydantic-ai-slim at its uv.lock
         # version: tests compare the vendored request types with that package.
+        env:
+          UV_CONSTRAINT: requirements/ci.txt
         run: |
           uv venv .venv-unit --python 3.11
           uv pip install --python .venv-unit/bin/python --strict -r requirements/unit-tests.txt pydantic-ai-slim==2.57.0
