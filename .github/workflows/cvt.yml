@@ -146,7 +146,12 @@ jobs:
           enable-org-read-access: "true"
           github-app-id: ${{ secrets.CI_FETCH_APP_ID }}
           github-app-private-key: ${{ secrets.CI_FETCH_APP_PRIVATE_KEY }}
+      - name: Inspect runner memory
+        run: free -m
       - name: Build native Phoenix
-        run: nix build .#default --no-link --print-build-logs --max-jobs 2 --cores 2
+        run: nix build .#default --no-link --print-build-logs --max-jobs 1 --cores 2
       - name: Check native Phoenix flake
-        run: nix flake check --print-build-logs --max-jobs 2 --cores 2
+        run: nix flake check --print-build-logs --max-jobs 1 --cores 2
+      - name: Inspect kernel warnings
+        if: always()
+        run: sudo dmesg --level=err,warn
