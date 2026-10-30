@@ -520,7 +520,11 @@
         npmRoot = source smokeInputs.dependencies + "/nix/package-smoke";
         nodejs = toolingPkgs.nodejs;
       };
-      smokePolicy = builtins.fromJSON (builtins.readFile (inputs.platform + "/nix/test-policy.json"));
+      smokePolicy =
+        (builtins.fromJSON (builtins.readFile (inputs.platform + "/nix/test-policy.json")))
+        // {
+          cleanupReserveMilliseconds = 4000;
+        };
       smokeSupport = pkgs.linkFarm "phoenix-package-smoke-support" [
         {
           name = "cucumber.json";
@@ -556,10 +560,11 @@
           policy = smokePolicy;
         }
       );
-      packageSmoke =
-        (pkgs.runCommand "phoenix-package-smoke" { } ''
+      packageSmokeCheck =
+        mode:
+        (pkgs.runCommand "phoenix-package-${mode}" { } ''
           set -euo pipefail
-          exec ${checkRunner} "$out/runner" "$PWD" ${tools.package-smoke-runner} "$out" ${smokeContext}
+          exec ${checkRunner} "$out/runner" "$PWD" ${tools.package-smoke-runner} "$out" ${smokeContext} ${mode}
         '').overrideAttrs
           {
             passthru = {
@@ -568,6 +573,8 @@
               steps = tooling.package-smoke-steps.output { };
             };
           };
+      packageSmoke = packageSmokeCheck "smoke";
+      packageSmokeOwnership = packageSmokeCheck "stall-cucumber";
       pythonImport = pkgs.runCommand "phoenix-python-import" { } ''
         set -euo pipefail
         exec ${pkgs.coreutils}/bin/timeout 60s ${tools.python-check} import "$out" ${environment}
@@ -649,6 +656,7 @@
       };
       checks.${system} = {
         package-smoke = packageSmoke;
+        package-smoke-ownership = packageSmokeOwnership;
         package-tool-lint = packageLint;
         package-tool-inputs =
           (pkgs.linkFarm "phoenix-package-tool-inputs" (
