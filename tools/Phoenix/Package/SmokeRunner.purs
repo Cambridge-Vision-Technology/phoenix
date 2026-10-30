@@ -249,7 +249,14 @@ run output contextPath mode = do
             observeStall cucumberPid
       result <- Effect.Aff.bracket (Effect.Aff.forkAff cucumber) (Effect.Aff.killFiber (Effect.Aff.error "Outer smoke owner closed Cucumber scope")) \fiber -> do
         Effect.Aff.bracket
-          (Effect.Aff.forkAff (Effect.Aff.catchError (serveHttp 0) (\error -> Effect.Class.liftEffect (Effect.Ref.write (Data.Maybe.Just error) httpFailure))))
+          ( Effect.Aff.forkAff
+              ( Effect.Aff.catchError (serveHttp 0)
+                  ( \error -> do
+                      Effect.Class.liftEffect (Effect.Ref.write (Data.Maybe.Just error) httpFailure)
+                      Effect.Aff.killFiber error fiber
+                  )
+              )
+          )
           (Effect.Aff.killFiber (Effect.Aff.error "Outer smoke owner closed HTTP executor"))
           ( \_ -> do
               cucumberPid <- readCucumberOwner
