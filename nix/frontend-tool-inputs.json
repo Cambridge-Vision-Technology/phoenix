@@ -1,0 +1,20 @@
+{
+  "build": {
+    "module": "Phoenix.Frontend.Build",
+    "dependencies": ["prelude", "effect", "arrays", "exceptions", "node-process"],
+    "sources": ["nix/tools/Phoenix/Frontend/Build.purs"],
+    "platform": ["tools/Platform/Node/Build.purs", "tools/Platform/Node/Build.js"]
+  },
+  "inputs": {
+    "module": "Phoenix.Frontend.Inputs",
+    "dependencies": ["prelude", "effect", "aff", "aff-promise", "arrays", "exceptions", "strings", "stringutils", "foldable-traversable", "argonaut-codecs", "argonaut-core", "foreign-object", "ordered-collections", "node-process", "node-path", "node-fs", "nullable", "maybe", "refs"],
+    "sources": ["nix/tools/Phoenix/Frontend/Inputs.purs", "nix/tools/Phoenix/Frontend/Inputs/Computed.purs", "nix/tools/Phoenix/Frontend/Inputs/Json.purs", "nix/tools/Platform/Node/Frontend.purs", "nix/tools/Platform/Node/Frontend.js"],
+    "platform": [
+      "tools/Platform/Node/Build.purs",
+      "tools/Platform/Node/Build.js",
+      "tools/Platform/Node/Inventory.purs",
+      "tools/Platform/Node/Inventory.js",
+      "tools/Build/Json.purs"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "publicFiles": [
+    "js/app/static/apple-touch-icon-114x114.png",
+    "js/app/static/apple-touch-icon-120x120.png",
+    "js/app/static/apple-touch-icon-144x144.png",
+    "js/app/static/apple-touch-icon-152x152.png",
+    "js/app/static/apple-touch-icon-180x180.png",
+    "js/app/static/apple-touch-icon-72x72.png",
+    "js/app/static/apple-touch-icon-76x76.png",
+    "js/app/static/apple-touch-icon.png",
+    "js/app/static/favicon.ico",
+    "js/app/static/modernizr.js"
+  ],
+  "moduleFiles": [
+    "js/app/src/agent/uiOperations/runtime/jsSandboxWorker.ts",
+    "js/app/src/components/templateEditor/language/fString/fStringTemplating.syntax.grammar",
+    "js/app/src/components/templateEditor/language/mustacheLike/mustacheLikeTemplating.syntax.grammar",
+    "js/app/src/styles/cascade-layers.css"
+  ],
+  "generators": [
+    {"manifest":"js/packages/phoenix-client/package.json","script":"generate","input":"schemas/openapi.json","output":"js/packages/phoenix-client/src/__generated__/api/v1.ts"},
+    {"manifest":"js/packages/phoenix-testing/package.json","script":"generate","input":"schemas/openapi.json","output":"js/packages/phoenix-testing/src/__generated__/api/v1.ts"}
+  ],
+  "recipes": [
+    {"manifest":"js/app/package.json","scripts":{"build":"pnpm run build:relay && vite build","build:relay":"relay-compiler"},"configs":["js/app/tsconfig.json"]},
+    {"manifest":"js/packages/phoenix-client/package.json","scripts":{"build":"tsc --build tsconfig.json tsconfig.esm.json && tsc-alias -p tsconfig.esm.json","prebuild":"pnpm run clean && pnpm run generate","clean":"rimraf dist","generate":"openapi-typescript --empty-objects-unknown=true --default-non-nullable=false ../../../schemas/openapi.json -o ./src/__generated__/api/v1.ts","postbuild":"echo '{\"type\": \"module\"}' > ./dist/esm/package.json"},"configs":["js/packages/phoenix-client/tsconfig.json","js/packages/phoenix-client/tsconfig.esm.json"]},
+    {"manifest":"js/packages/phoenix-config/package.json","scripts":{"build":"tsc --build tsconfig.json tsconfig.esm.json tsconfig.browser.json && tsc-alias -p tsconfig.browser.json && tsc-alias -p tsconfig.esm.json && tsc-alias -p tsconfig.json","clean":"rimraf dist","postbuild":"echo '{\"type\": \"module\"}' > ./dist/esm/package.json && echo '{\"type\": \"module\"}' > ./dist/browser/package.json"},"configs":["js/packages/phoenix-config/tsconfig.json","js/packages/phoenix-config/tsconfig.esm.json","js/packages/phoenix-config/tsconfig.browser.json"]},
+    {"manifest":"js/packages/phoenix-evals/package.json","scripts":{"build":"tsc --build tsconfig.json tsconfig.esm.json && tsc-alias -p tsconfig.esm.json","prebuild":"pnpm run clean","clean":"rimraf dist","postbuild":"echo '{\"type\": \"module\"}' > ./dist/esm/package.json"},"configs":["js/packages/phoenix-evals/tsconfig.json","js/packages/phoenix-evals/tsconfig.esm.json"]},
+    {"manifest":"js/packages/phoenix-otel/package.json","scripts":{"build":"tsc --build tsconfig.json tsconfig.esm.json && tsc-alias -p tsconfig.esm.json","prebuild":"pnpm run clean","clean":"rimraf dist","postbuild":"echo '{\"type\": \"module\"}' > ./dist/esm/package.json"},"configs":["js/packages/phoenix-otel/tsconfig.json","js/packages/phoenix-otel/tsconfig.esm.json"]},
+    {"manifest":"js/packages/phoenix-testing/package.json","scripts":{"build":"tsc --build tsconfig.json","prebuild":"pnpm run clean && pnpm run generate","clean":"rimraf dist","generate":"openapi-typescript --empty-objects-unknown=true --default-non-nullable=false ../../../schemas/openapi.json -o ./src/__generated__/api/v1.ts"},"configs":["js/packages/phoenix-testing/tsconfig.json"]}
+  ]
+}
