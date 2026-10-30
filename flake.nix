@@ -48,7 +48,9 @@
       toolInputs = builtins.fromJSON (builtins.readFile ./nix/frontend-tool-inputs.json);
       pythonToolInputs = builtins.fromJSON (builtins.readFile ./nix/python-tool-inputs.json);
       runtimeToolInputs = builtins.fromJSON (builtins.readFile ./nix/runtime-tool-inputs.json);
-      allToolInputs = toolInputs // pythonToolInputs // runtimeToolInputs;
+      packageToolInputs = builtins.fromJSON (builtins.readFile ./nix/package-tool-inputs.json);
+      smokeInputs = builtins.fromJSON (builtins.readFile ./nix/package-smoke-inputs.json);
+      allToolInputs = toolInputs // pythonToolInputs // runtimeToolInputs // packageToolInputs;
       source =
         paths:
         fs.toSource {
@@ -122,9 +124,11 @@
         project.script {
           module = allToolInputs.${name}.module;
           esbuild =
-            pkgs.lib.optionalAttrs (builtins.hasAttr name runtimeToolInputs) {
-              minify = false;
-            }
+            pkgs.lib.optionalAttrs
+              (builtins.hasAttr name runtimeToolInputs || builtins.hasAttr name packageToolInputs)
+              {
+                minify = false;
+              }
             // pkgs.lib.optionalAttrs (name == "runtime-wasm") {
               "alias:koffi" = "${wasmtimeModules}/koffi";
               external = [ "${wasmtimeModules}/koffi" ];
@@ -487,6 +491,83 @@
         set -euo pipefail
         exec ${checkRunner} "$out/runner" "$PWD" ${tools.runtime-check} "$out" ${evaluatorRuntimes} ${environment} ${tools.runtime-wasm} ${environment}/${python.sitePackages}/wasmtime/linux-x86_64/_libwasmtime.so ${denoOriginal}/deno ${montyOriginal}/pydantic_monty_runtime-1.1.0.data/scripts/monty ${pkgs.coreutils}/bin/sha256sum ${toolingPkgs.procps}/bin/ps
       '';
+      launcherConfig = pkgs.writeText "phoenix-launcher.json" (
+        builtins.toJSON {
+          python = "${environment}/bin/python";
+          runtimePath = evaluatorRuntimes.launcherEnvironment.PATH;
+          wasm = evaluatorRuntimes.launcherEnvironment.PHOENIX_WASM_BINARY_PATH;
+        }
+      );
+      launcher = pkgs.writeShellScript "phoenix" ''
+        set -euo pipefail
+        exec ${tools.package-launcher} ${launcherConfig} "$@"
+      '';
+      phoenix =
+        (pkgs.linkFarm "phoenix-20.25.0-native" [
+          {
+            name = "bin/phoenix";
+            path = launcher;
+          }
+        ]).overrideAttrs
+          {
+            passthru = {
+              pythonEnvironment = environment;
+              inherit launcher launcherConfig;
+              launcherTool = tools.package-launcher;
+            };
+          };
+      smokeDependencies = toolingPkgs.importNpmLock.buildNodeModules {
+        npmRoot = source smokeInputs.dependencies + "/nix/package-smoke";
+        nodejs = toolingPkgs.nodejs;
+      };
+      smokePolicy = builtins.fromJSON (builtins.readFile (inputs.platform + "/nix/test-policy.json"));
+      smokeSupport = pkgs.linkFarm "phoenix-package-smoke-support" [
+        {
+          name = "cucumber.json";
+          path = pkgs.writeText "phoenix-package-cucumber.json" "{}";
+        }
+        {
+          name = "steps.mjs";
+          path = pkgs.writeText "phoenix-package-steps.mjs" (
+            builtins.replaceStrings
+              [ "@steps@" "@deadline@" "@cucumber@" ]
+              [
+                "${tooling.package-smoke-steps.output { }}/Phoenix.Package.Smoke/index.js"
+                (toString smokePolicy.singleMilliseconds)
+                "${smokeDependencies}/node_modules/@cucumber/cucumber/lib/wrapper.mjs"
+              ]
+              (builtins.readFile (source smokeInputs.registration + "/features/native-package.mjs"))
+          );
+        }
+      ];
+      smokeContext = pkgs.writeText "phoenix-package-smoke.json" (
+        builtins.toJSON {
+          package = phoenix;
+          pythonEnvironment = environment;
+          runtimes = evaluatorRuntimes;
+          static = "${environment}/${python.sitePackages}/phoenix/server/static";
+          curl = "${pkgs.curl}/bin/curl";
+          node = "${toolingPkgs.nodejs}/bin/node";
+          cucumber = "${smokeDependencies}/node_modules/@cucumber/cucumber/bin/cucumber.js";
+          support = smokeSupport;
+          feature = "${source smokeInputs.feature}/features/native-package.feature";
+          processTable = "${toolingPkgs.procps}/bin/ps";
+          timeout = "${pkgs.coreutils}/bin/timeout";
+          policy = smokePolicy;
+        }
+      );
+      packageSmoke =
+        (pkgs.runCommand "phoenix-package-smoke" { } ''
+          set -euo pipefail
+          exec ${checkRunner} "$out/runner" "$PWD" ${tools.package-smoke-runner} "$out" ${smokeContext}
+        '').overrideAttrs
+          {
+            passthru = {
+              context = smokeContext;
+              runner = tools.package-smoke-runner;
+              steps = tooling.package-smoke-steps.output { };
+            };
+          };
       pythonImport = pkgs.runCommand "phoenix-python-import" { } ''
         set -euo pipefail
         exec ${pkgs.coreutils}/bin/timeout 60s ${tools.python-check} import "$out" ${environment}
@@ -542,6 +623,16 @@
           inputs.purescript-whine.packages.${system}.default
         }/bin/whine 'tools/**/*.purs'
       '';
+      packageLintSource = source (
+        pkgs.lib.concatMap (entry: entry.sources) (builtins.attrValues packageToolInputs)
+        ++ [ "whine.yaml" ]
+      );
+      packageLint = toolingPkgs.runCommand "phoenix-package-tool-lint" { } ''
+        set -euo pipefail
+        exec ${checkRunner} "$out" ${packageLintSource} ${
+          inputs.purescript-whine.packages.${system}.default
+        }/bin/whine 'tools/**/*.purs'
+      '';
     in
     {
       packages.${system} = {
@@ -553,9 +644,24 @@
         evaluator-deno = deno;
         evaluator-deno-original = denoOriginal;
         evaluator-monty-original = montyOriginal;
-        default = environment;
+        inherit phoenix;
+        default = phoenix;
       };
       checks.${system} = {
+        package-smoke = packageSmoke;
+        package-tool-lint = packageLint;
+        package-tool-inputs =
+          (pkgs.linkFarm "phoenix-package-tool-inputs" (
+            pkgs.lib.mapAttrsToList (name: _: {
+              inherit name;
+              path = toolChecks.${name};
+            }) packageToolInputs
+          )).overrideAttrs
+            {
+              passthru.entries = pkgs.lib.genAttrs (builtins.attrNames packageToolInputs) (
+                name: toolChecks.${name}
+              );
+            };
         evaluator-runtimes = evaluatorCheck;
         runtime-tool-lint = runtimeLint;
         runtime-tool-inputs =

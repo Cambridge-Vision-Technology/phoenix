@@ -1,0 +1,8 @@
+{
+  "name": "phoenix-native-package-smoke",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@cucumber/cucumber": "12.2.0"
+  }
+}
