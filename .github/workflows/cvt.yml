@@ -161,12 +161,12 @@ jobs:
   success:
     name: ci / success
     if: ${{ always() }}
-    needs: [checks, image]
+    needs: [checks, image, nix]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
       - name: Reject unsuccessful prerequisites
-        if: ${{ always() && (needs.checks.result != 'success' || needs.image.result != 'success') }}
+        if: ${{ always() && (needs.checks.result != 'success' || needs.image.result != 'success' || needs.nix.result != 'success') }}
         run: exec false
       - name: Confirm successful prerequisites
         run: exec true
