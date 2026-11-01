@@ -63,7 +63,7 @@ jobs:
         run: ../.venv-unit/bin/pytest unit/ -n 4 --dist loadscope -ra
 
   image:
-    name: CVT image
+    name: ci / success
     needs: checks
     runs-on: ubuntu-latest
     timeout-minutes: 45
