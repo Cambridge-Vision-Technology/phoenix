@@ -65,7 +65,7 @@ jobs:
         run: ../.venv-unit/bin/pytest unit/ -n 4 --dist loadscope -ra
 
   image:
-    name: ci / success
+    name: CVT image
     needs: checks
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -128,3 +128,16 @@ jobs:
       - name: Remove test container
         if: always()
         run: docker rm --force phoenix
+
+  success:
+    name: ci / success
+    if: ${{ always() }}
+    needs: [checks, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Reject unsuccessful prerequisites
+        if: ${{ always() && (needs.checks.result != 'success' || needs.image.result != 'success') }}
+        run: exec false
+      - name: Confirm successful prerequisites
+        run: exec true
