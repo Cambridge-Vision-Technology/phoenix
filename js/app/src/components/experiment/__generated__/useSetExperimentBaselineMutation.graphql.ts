@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<a7f0c35773b057d6c79bb7daa383998f>>
+ * @generated SignedSource<<b778d924eab0550b91808172096a9d9f>>
  * @lightSyntaxTransform
  */
 
@@ -118,6 +118,20 @@ v6 = [
     "args": null,
     "kind": "ScalarField",
     "name": "runCount",
+    "storageKey": null
+  },
+  {
+    "alias": null,
+    "args": null,
+    "kind": "ScalarField",
+    "name": "expectedRunCount",
+    "storageKey": null
+  },
+  {
+    "alias": null,
+    "args": null,
+    "kind": "ScalarField",
+    "name": "metadata",
     "storageKey": null
   },
   {
@@ -358,12 +372,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "48995268c46af9f2486de01abd8340d0",
+    "cacheID": "e8f94292edaca24782d9bc4494aae229",
     "id": null,
     "metadata": {},
     "name": "useSetExperimentBaselineMutation",
     "operationKind": "mutation",
-    "text": "mutation useSetExperimentBaselineMutation(\n  $experimentId: ID!\n  $baseline: Boolean!\n) {\n  setExperimentBaseline(experimentId: $experimentId, baseline: $baseline) {\n    dataset {\n      id\n      baselineExperiment {\n        ...useExperimentMetricsData_experiment\n        id\n      }\n    }\n    experiment {\n      id\n      isBaseline\n    }\n    previousBaselineExperiment {\n      id\n      isBaseline\n    }\n  }\n}\n\nfragment useExperimentMetricsData_experiment on Experiment {\n  id\n  name\n  sequenceNumber\n  averageRunLatencyMs\n  errorRate\n  runCount\n  annotationSummaries {\n    annotationName\n    meanScore\n  }\n  costSummary {\n    prompt {\n      tokens\n      cost\n    }\n    completion {\n      tokens\n      cost\n    }\n    total {\n      tokens\n      cost\n    }\n  }\n  costDetailSummaryEntries {\n    tokenType\n    isPrompt\n    value {\n      tokens\n    }\n  }\n}\n"
+    "text": "mutation useSetExperimentBaselineMutation(\n  $experimentId: ID!\n  $baseline: Boolean!\n) {\n  setExperimentBaseline(experimentId: $experimentId, baseline: $baseline) {\n    dataset {\n      id\n      baselineExperiment {\n        ...useExperimentMetricsData_experiment\n        id\n      }\n    }\n    experiment {\n      id\n      isBaseline\n    }\n    previousBaselineExperiment {\n      id\n      isBaseline\n    }\n  }\n}\n\nfragment useExperimentMetricsData_experiment on Experiment {\n  id\n  name\n  sequenceNumber\n  averageRunLatencyMs\n  errorRate\n  runCount\n  expectedRunCount\n  metadata\n  annotationSummaries {\n    annotationName\n    meanScore\n  }\n  costSummary {\n    prompt {\n      tokens\n      cost\n    }\n    completion {\n      tokens\n      cost\n    }\n    total {\n      tokens\n      cost\n    }\n  }\n  costDetailSummaryEntries {\n    tokenType\n    isPrompt\n    value {\n      tokens\n    }\n  }\n}\n"
   }
 };
 })();

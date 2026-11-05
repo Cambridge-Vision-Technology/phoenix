@@ -289,6 +289,13 @@
         dontInstall = true;
         dontFixup = true;
       };
+      frontendRelay = frontendTypecheck.overrideAttrs {
+        name = "phoenix-frontend-relay";
+        buildPhase = ''
+          set -euo pipefail
+          exec ${tools.build} relay "$out" "$PWD" ${pnpm}/bin/pnpm
+        '';
+      };
       frontendDiscoveryCandidates = fs.toSource {
         root = ./.;
         fileset = fs.unions [
@@ -692,6 +699,15 @@
         );
       };
       apps.${system} = {
+        relay-export = {
+          type = "app";
+          program = toString (
+            toolingPkgs.writeShellScript "phoenix-relay-export" ''
+              set -euo pipefail
+              exec ${tools.build} export-relay ${frontendRelay} "$@"
+            ''
+          );
+        };
         purescript-format = {
           type = "app";
           program = "${inputs.purs-nix.inputs.ps-tools.legacyPackages.${system}.purs-tidy}/bin/purs-tidy";
