@@ -160,6 +160,8 @@ from phoenix.server.rate_limiters import AdaptiveTokenBucket, UnavailableTokensE
 from phoenix.server.types import DaemonTask, DbSessionFactory
 from phoenix.utilities.template_formatters import TemplateFormatterError
 
+from ..api.helpers.db_trace_media import offload_db_trace_media
+
 if TYPE_CHECKING:
     from opentelemetry.context import Context
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -505,6 +507,7 @@ class TaskWorkItem(WorkItem):
 
         Returns the persisted ExperimentRun with its generated id.
         """
+        await offload_db_trace_media(self._db, db_traces or ())
         with anyio.fail_after(5, shield=True):
             async with self._db() as session:
                 if db_traces:
@@ -1010,6 +1013,7 @@ class EvalWorkItem(WorkItem):
 
         async def _persist_traces() -> None:
             if db_traces:
+                await offload_db_trace_media(self._db, db_traces)
                 async with self._db() as session:
                     session.add_all(db_traces)
 

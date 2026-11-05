@@ -69,6 +69,8 @@ from phoenix.server.experiments.utils import generate_experiment_project_name
 from phoenix.server.types import DbSessionFactory
 from phoenix.tracers import Tracer
 
+from .helpers.db_trace_media import offload_db_trace_media
+
 GenericType = TypeVar("GenericType")
 
 logger = logging.getLogger(__name__)
@@ -130,6 +132,7 @@ async def _stream_single_chat_completion(
         )
 
     db_traces = tracer.get_db_traces(project_id=project_id)
+    await offload_db_trace_media(db, db_traces)
     async with db() as session:
         session.add_all(db_traces)
         await session.flush()
