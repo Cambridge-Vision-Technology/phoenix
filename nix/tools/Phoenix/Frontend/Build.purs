@@ -7,19 +7,28 @@ import Data.Foldable as Data.Foldable
 import Effect as Effect
 import Effect.Exception as Effect.Exception
 import Node.Process as Node.Process
+import Node.FS.Sync as Node.FS.Sync
+import Node.FS.Perms as Node.FS.Perms
 import Platform.Node.Build as Platform.Node.Build
 
-copyRelay :: String -> String -> String -> Effect.Effect Unit
-copyRelay input output relative = do
+copyRelay :: String -> String -> String -> Boolean -> Effect.Effect Unit
+copyRelay input output relative generated = do
+  let
+    target = output <> "/" <> relative
+    permissions directory = Node.FS.Perms.mkPerms (Node.FS.Perms.mkPerm true true directory) (Node.FS.Perms.mkPerm true false directory) (Node.FS.Perms.mkPerm true false directory)
+  when generated do
+    Platform.Node.Build.mkdirImpl target
+    Node.FS.Sync.chmod target (permissions true)
   entries <- Platform.Node.Build.entriesImpl (input <> "/" <> relative)
   Data.Foldable.for_ entries \entry -> do
     let path = relative <> "/" <> entry
     directory <- Platform.Node.Build.directoryImpl (input <> "/" <> path)
-    when directory do
-      if entry == "__generated__" then do
-        Platform.Node.Build.mkdirImpl (output <> "/" <> path)
-        Platform.Node.Build.copyImpl (input <> "/" <> path) (output <> "/" <> path)
-      else copyRelay input output path
+    if directory then copyRelay input output path (generated || entry == "__generated__")
+    else when generated do
+      exists <- Platform.Node.Build.existsImpl (output <> "/" <> path)
+      when exists (Node.FS.Sync.chmod (output <> "/" <> path) (permissions false))
+      text <- Platform.Node.Build.readImpl (input <> "/" <> path)
+      Platform.Node.Build.writeImpl (output <> "/" <> path) text
 
 main :: Effect.Effect Unit
 main = do
@@ -27,9 +36,9 @@ main = do
   case arguments of
     [ "relay", output, root, pnpm ] -> do
       Platform.Node.Build.executeImpl pnpm [ "--filter", "phoenix-ui", "run", "build:relay" ] (root <> "/js")
-      copyRelay root output "js/app/src"
+      copyRelay root output "js/app/src" false
     [ "export-relay", input, output ] ->
-      copyRelay input output "js/app/src"
+      copyRelay input output "js/app/src" false
     [ "export-generated", input, output ] -> do
       text <- Platform.Node.Build.readImpl input
       Platform.Node.Build.writeImpl output text
