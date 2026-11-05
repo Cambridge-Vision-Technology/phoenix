@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<d3cd7c31d9ba26d61c36aa32f59e923d>>
+ * @generated SignedSource<<ea142f30028a9f1bde30ad17e833a97a>>
  * @lightSyntaxTransform
  */
 
@@ -121,6 +121,20 @@ v8 = [
     "args": null,
     "kind": "ScalarField",
     "name": "runCount",
+    "storageKey": null
+  },
+  {
+    "alias": null,
+    "args": null,
+    "kind": "ScalarField",
+    "name": "expectedRunCount",
+    "storageKey": null
+  },
+  {
+    "alias": null,
+    "args": null,
+    "kind": "ScalarField",
+    "name": "metadata",
     "storageKey": null
   },
   {
@@ -425,12 +439,12 @@ return {
     ]
   },
   "params": {
-    "cacheID": "540213f818c2a8ebbdb7a34e37c10874",
+    "cacheID": "212c5999896742f0738b97f9e41bcc4d",
     "id": null,
     "metadata": {},
     "name": "useExperimentMetricsDataQuery",
     "operationKind": "query",
-    "text": "query useExperimentMetricsDataQuery(\n  $id: ID!\n  $count: Int!\n  $filterIds: [ID!]\n  $isComparedSelection: Boolean!\n) {\n  dataset: node(id: $id) {\n    __typename\n    ... on Dataset {\n      baselineExperiment @skip(if: $isComparedSelection) {\n        ...useExperimentMetricsData_experiment\n        id\n      }\n      metricsExperiments: experiments(first: $count, filterIds: $filterIds, includeEphemeral: $isComparedSelection) {\n        edges {\n          experiment: node {\n            ...useExperimentMetricsData_experiment\n            id\n          }\n        }\n      }\n    }\n    id\n  }\n}\n\nfragment useExperimentMetricsData_experiment on Experiment {\n  id\n  name\n  sequenceNumber\n  averageRunLatencyMs\n  errorRate\n  runCount\n  annotationSummaries {\n    annotationName\n    meanScore\n  }\n  costSummary {\n    prompt {\n      tokens\n      cost\n    }\n    completion {\n      tokens\n      cost\n    }\n    total {\n      tokens\n      cost\n    }\n  }\n  costDetailSummaryEntries {\n    tokenType\n    isPrompt\n    value {\n      tokens\n    }\n  }\n}\n"
+    "text": "query useExperimentMetricsDataQuery(\n  $id: ID!\n  $count: Int!\n  $filterIds: [ID!]\n  $isComparedSelection: Boolean!\n) {\n  dataset: node(id: $id) {\n    __typename\n    ... on Dataset {\n      baselineExperiment @skip(if: $isComparedSelection) {\n        ...useExperimentMetricsData_experiment\n        id\n      }\n      metricsExperiments: experiments(first: $count, filterIds: $filterIds, includeEphemeral: $isComparedSelection) {\n        edges {\n          experiment: node {\n            ...useExperimentMetricsData_experiment\n            id\n          }\n        }\n      }\n    }\n    id\n  }\n}\n\nfragment useExperimentMetricsData_experiment on Experiment {\n  id\n  name\n  sequenceNumber\n  averageRunLatencyMs\n  errorRate\n  runCount\n  expectedRunCount\n  metadata\n  annotationSummaries {\n    annotationName\n    meanScore\n  }\n  costSummary {\n    prompt {\n      tokens\n      cost\n    }\n    completion {\n      tokens\n      cost\n    }\n    total {\n      tokens\n      cost\n    }\n  }\n  costDetailSummaryEntries {\n    tokenType\n    isPrompt\n    value {\n      tokens\n    }\n  }\n}\n"
   }
 };
 })();
