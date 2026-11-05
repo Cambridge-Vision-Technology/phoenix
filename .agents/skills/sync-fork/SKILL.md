@@ -77,7 +77,7 @@ Do not disable it.
 | Category | Handling |
 |---|---|
 | Generated artifacts | Takes upstream's copy, re-runs codegen. **Never merge these by hand** — codegen reproduces the fork's additions deterministically. |
-| Migration chain | Re-points the earliest fork-local migration onto upstream's new head. |
+| Migration chain | Adds a merge revision joining the fork's head and upstream's new head. Never moves an existing migration. |
 | Hand-written overlap | Left alone on purpose. This is the only part that needs judgment. |
 
 Generated artifacts means anything under `__generated__/`, plus `app/schema.graphql`,
@@ -109,8 +109,26 @@ resolving one wrong and not finding out.
 **`tests/unit/db/test_migration_heads.py`** — Phoenix runs `alembic upgrade head`,
 *singular*. Two heads means the server will not start. Git reports **no conflict** for
 this, because two branches can each append a migration without touching the same line. If
-this fails after a sync, re-point the earliest fork-local migration's `down_revision` at
-upstream's new head (`make sync-fork` does it; do it by hand if you merged manually).
+this fails after a sync, add a merge revision joining the two heads (`make sync-fork` does
+it; after a manual merge run `uv run python -c "import sys; sys.path.insert(0, 'scripts');
+import sync_fork as s; s.write_merge_migration(s.working_tree_migration_heads(),
+s.upstream_migration_head())"`).
+
+**Never fix two heads by re-pointing a fork migration's `down_revision`.** It makes the
+graph linear and every fresh-database test pass, and it breaks every deployment: a deployed
+database is stamped at the fork's head, so alembic treats each upstream migration slipped
+in beneath that head as already applied and skips it. The August 2026 sync did this and
+hid two migrations from older deployments; the November one left Phoenix unable to start
+(`no such table: deployment_secret`). `7feaee3fe2d8` repairs the first.
+
+**`tests/unit/db/test_fork_migration_upgrade_paths.py`** — the guard for exactly that. It
+builds the schema a deployment has, stamps it at the fork's head, and upgrades. A re-point
+fails it; a merge revision passes it.
+
+Because the graph is branched, upstream's `test_up_and_down_migrations.py` — which asserts a
+linear history — is deselected in `pre-merge.yml`, and
+`tests/integration/db_migrations/test_fork_up_and_down_migrations.py` steps every edge of the
+graph up and down instead. If upstream changes its test, port the change across.
 
 **`TestEveryProviderAcceptsImagesNow`** in
 `tests/unit/server/api/helpers/test_playground_media.py` — asserts each provider's payload

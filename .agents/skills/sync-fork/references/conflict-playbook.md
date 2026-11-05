@@ -115,8 +115,10 @@ Phoenix calls `command.upgrade(config, "head")` — singular. Two branches can e
 migration without touching the same line, so git reports nothing and the failure surfaces
 only when a database is opened.
 
-Caught by `tests/unit/db/test_migration_heads.py`. Fix by re-pointing the earliest
-fork-local migration's `down_revision` at upstream's new head.
+Caught by `tests/unit/db/test_migration_heads.py`. Fix with a merge revision joining the
+two heads, which `make sync-fork` writes. Do **not** re-point a fork migration's
+`down_revision`: deployed databases are stamped at the fork's head and would skip every
+upstream migration moved beneath it. `test_fork_migration_upgrade_paths.py` catches that.
 
 ### A dev database stamped at a deleted revision
 

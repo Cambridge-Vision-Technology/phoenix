@@ -67,7 +67,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  UV_VERSION: "0.12.19"
+  UV_VERSION: "0.13.5"
   # fake openai key so that llama_index doesn't download huggingface embeddings
   OPENAI_API_KEY: "sk-fake-openai-key"
 
@@ -306,9 +306,34 @@ jobs:
       # their runner VMs reclaimed ~6 minutes in ("The runner has received a
       # shutdown signal"). `-n auto` for the same reason as the unit suite: a
       # reclaimed runner costs a whole hour, a slow run only costs minutes.
+      # Upstream replaced tox with `uv sync --frozen` (Arize-ai/phoenix#17409);
+      # these steps mirror its python-CI integration job.
+      - name: Sync dependencies
+        run: uv sync --frozen
+      # Return the next major version in response headers so all client methods
+      # work; otherwise, some may be version-gated.
+      - name: Report the next major server version
+        run: |
+          uv run --no-sync python - <<'PY'
+          import re, pathlib
+          vf = pathlib.Path("src/phoenix/version.py")
+          major = int(re.search(r'"(\d+)\.', vf.read_text()).group(1))
+          vf.write_text(f'__version__ = "{major + 1}.0.0"\n')
+          PY
+      # Upstream's up/down migration test asserts a *linear* history. The fork's is
+      # branched on purpose — its migrations are joined to upstream's by merge
+      # revisions, never moved, so deployed databases do not skip upstream migrations
+      # (see scripts/sync_fork.py). `test_fork_up_and_down_migrations.py` runs the same
+      # up/down of every step over each edge of the graph instead.
       - name: Run integration tests
         timeout-minutes: 90
-        run: uvx tox run -e integration_tests -- -ra --reruns 5 -n auto
+        working-directory: tests/integration
+        env:
+          PHOENIX_MASK_INTERNAL_SERVER_ERRORS: "false"
+        run: >-
+          uv run --no-sync pytest -ra --durations=20 --reruns 5 --timeout 360 -n auto
+          --deselect db_migrations/test_up_and_down_migrations.py::test_up_and_down_migrations
+          .
 
   python-migrations:
     name: DB Migration Continuity (${{ matrix.db }}${{ matrix.concurrently && ', concurrently' || '' }})
@@ -399,7 +424,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        pkg: [phoenix_client, phoenix_evals, phoenix_otel]
+        include:
+          - pkg: phoenix_client
+            dist: arize-phoenix-client
+            dir: packages/phoenix-client
+            check: uv run --no-sync pyright . && uv run --no-sync mypy --strict .
+            tests: tests/client
+          - pkg: phoenix_evals
+            dist: arize-phoenix-evals
+            dir: packages/phoenix-evals
+            check: uv run --no-sync mypy .
+            tests: .
+          - pkg: phoenix_otel
+            dist: arize-phoenix-otel
+            dir: packages/phoenix-otel
+            check: uv run --no-sync mypy .
+            tests: .
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -413,8 +453,19 @@ jobs:
         uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
         with:
           version: ${{ env.UV_VERSION }}
+      # Mirrors upstream's python-CI package jobs (tox removed upstream in #17409).
+      - name: Sync package environment
+        env:
+          DIST: ${{ matrix.dist }}
+        run: uv sync --frozen --no-editable --package "$DIST" --all-extras
+      - name: Type check package
+        working-directory: ${{ matrix.dir }}
+        run: ${{ matrix.check }}
       - name: Run package test suite
-        run: uvx tox run -e ${{ matrix.pkg }} -- -ra -x
+        working-directory: ${{ matrix.dir }}
+        env:
+          TESTS: ${{ matrix.tests }}
+        run: uv run --no-sync pytest -ra -x "$TESTS"
 
   helm-tests:
     name: Helm Chart Tests

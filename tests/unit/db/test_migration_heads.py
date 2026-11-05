@@ -31,8 +31,9 @@ def test_the_migration_graph_has_exactly_one_head() -> None:
     assert len(heads) == 1, (
         f"Expected one migration head, found {len(heads)}: {sorted(heads)}. "
         "Two heads mean `alembic upgrade head` fails and Phoenix will not start. "
-        "After syncing a fork, re-point the earliest fork-local migration's "
-        "`down_revision` at the new upstream head so the graph stays linear."
+        "After syncing a fork, add a merge revision joining the heads (`make sync-fork` "
+        "writes one). Do not re-point a fork migration: deployed databases are stamped "
+        "at the fork's head and would skip the upstream migrations moved beneath it."
     )
 
 
