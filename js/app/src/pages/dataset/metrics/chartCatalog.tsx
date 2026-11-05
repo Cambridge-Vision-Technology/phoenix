@@ -71,8 +71,8 @@ const CHART_DEFINITIONS: Record<
   annotation_scores: {
     name: "Annotation score comparison",
     description: {
-      recent: `Mean scores across all annotations for the last ${EXPERIMENT_METRICS_EXPERIMENT_COUNT} experiments`,
-      compared: "Mean scores across all annotations per experiment",
+      recent: `Annotation scores for the last ${EXPERIMENT_METRICS_EXPERIMENT_COUNT} experiments`,
+      compared: "Annotation scores per experiment",
     },
     chartType: "line",
     Component: ExperimentAnnotationScoresChart,

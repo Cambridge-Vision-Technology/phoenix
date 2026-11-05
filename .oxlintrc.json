@@ -50,5 +50,5 @@
     ]
   },
 
-  "ignorePatterns": ["**/dist/**", "**/build/**", "**/node_modules/**"]
+  "ignorePatterns": ["**/dist/**", "**/build/**", "**/node_modules/**", "**/legend/summary.generated.js"]
 }
