@@ -6,8 +6,8 @@ from phoenix.server.api.helpers.message_helpers import (
     PlaygroundMessage,
 )
 from phoenix.server.api.helpers.message_media import (
+    content_blocks,
     message_media,
-    message_text,
 )
 
 from ._allowlists import (
@@ -32,7 +32,8 @@ def openai_chat_content_parts(
     A user turn's content as Chat Completions parts, when it carries media.
 
     A message with media cannot be sent as a bare string; it becomes an ordered
-    part list, media following the text as the editor lays it out.
+    part list, in the order the template authored. Position matters to the model:
+    a prompt that puts its image first must not have it moved after the text.
 
     Three clients speak this format — the streaming client and both reasoning
     clients — and they used to hold a copy of this each. Copies are worse than the
@@ -50,8 +51,7 @@ def openai_chat_content_parts(
     Raises:
         BadRequest: Media is unresolved, or of a type OpenAI does not accept.
     """
-    media = message_media(message)
-    if not media:
+    if not message_media(message):
         return None
 
     from openai.types.chat import (
@@ -61,9 +61,11 @@ def openai_chat_content_parts(
     )
 
     parts: list[ChatCompletionContentPartParam] = []
-    if content := message_text(message):
-        parts.append(ChatCompletionContentPartTextParam(type="text", text=content))
-    for block in media:
+    for block in content_blocks(message):
+        if block["type"] == "text":
+            if block["text"]:
+                parts.append(ChatCompletionContentPartTextParam(type="text", text=block["text"]))
+            continue
         if block["kind"] == "file":
             # Chat Completions carries a document as a `file` part, and requires a
             # filename alongside the payload.
@@ -105,7 +107,8 @@ def openai_responses_content_parts(
 
     The Responses API names its parts differently from Chat Completions —
     `input_image` and `input_file` rather than `image_url` and `file` — so the two
-    formats cannot share a builder even though they come from the same SDK.
+    formats cannot share a builder even though they come from the same SDK. Parts
+    keep the order the template authored, as they do for Chat Completions.
 
     Args:
         message: The message to convert, media already resolved.
@@ -117,17 +120,18 @@ def openai_responses_content_parts(
     Raises:
         BadRequest: Media is unresolved, or of a type OpenAI does not accept.
     """
-    media = message_media(message)
-    if not media:
+    if not message_media(message):
         return None
 
     from openai.types.responses import ResponseInputImageParam, ResponseInputTextParam
     from openai.types.responses.response_input_file_param import ResponseInputFileParam
 
     parts: list[Any] = []
-    if content := message_text(message):
-        parts.append(ResponseInputTextParam(type="input_text", text=content))
-    for block in media:
+    for block in content_blocks(message):
+        if block["type"] == "text":
+            if block["text"]:
+                parts.append(ResponseInputTextParam(type="input_text", text=block["text"]))
+            continue
         if block["kind"] == "file":
             parts.append(
                 ResponseInputFileParam(

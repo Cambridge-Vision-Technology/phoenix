@@ -677,8 +677,9 @@ class TestOpenAIImages:
         param = _openai_client()._to_openai_chat_completion_message_param(resolved_messages[0])
         assert param["role"] == "user"
         assert param["content"] == [
-            {"type": "text", "text": "before\nafter"},
+            {"type": "text", "text": "before"},
             {"type": "image_url", "image_url": {"url": _EXPECTED_DATA_URL}},
+            {"type": "text", "text": "after"},
         ]
 
     async def test_inlines_the_bytes_rather_than_a_remote_url(
@@ -734,12 +735,13 @@ class TestOpenAIResponsesImages:
     async def test_sends_an_input_image_part(self, resolved_messages: Any) -> None:
         items = _responses_client()._to_openai_response_input_item_param(resolved_messages)
         assert items[0]["content"] == [
-            {"type": "input_text", "text": "before\nafter"},
+            {"type": "input_text", "text": "before"},
             {
                 "type": "input_image",
                 "detail": "auto",
                 "image_url": _EXPECTED_DATA_URL,
             },
+            {"type": "input_text", "text": "after"},
         ]
 
 
