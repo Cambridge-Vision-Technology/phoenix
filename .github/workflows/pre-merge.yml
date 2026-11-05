@@ -320,12 +320,20 @@ jobs:
           major = int(re.search(r'"(\d+)\.', vf.read_text()).group(1))
           vf.write_text(f'__version__ = "{major + 1}.0.0"\n')
           PY
+      # Upstream's up/down migration test asserts a *linear* history. The fork's is
+      # branched on purpose — its migrations are joined to upstream's by merge
+      # revisions, never moved, so deployed databases do not skip upstream migrations
+      # (see scripts/sync_fork.py). `test_fork_up_and_down_migrations.py` runs the same
+      # up/down of every step over each edge of the graph instead.
       - name: Run integration tests
         timeout-minutes: 90
         working-directory: tests/integration
         env:
           PHOENIX_MASK_INTERNAL_SERVER_ERRORS: "false"
-        run: uv run --no-sync pytest -ra --durations=20 --reruns 5 --timeout 360 -n auto .
+        run: >-
+          uv run --no-sync pytest -ra --durations=20 --reruns 5 --timeout 360 -n auto
+          --deselect db_migrations/test_up_and_down_migrations.py::test_up_and_down_migrations
+          .
 
   python-migrations:
     name: DB Migration Continuity (${{ matrix.db }}${{ matrix.concurrently && ', concurrently' || '' }})

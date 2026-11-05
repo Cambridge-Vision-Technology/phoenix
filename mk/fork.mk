@@ -41,7 +41,7 @@ docker-build-fork: check-dockerfile-fork ## Build the fork image; override FORK_
 sync-fork-check: ## Report what syncing with upstream would conflict on (changes nothing)
 	@$(UV) run python scripts/sync_fork.py --check
 
-sync-fork: ## Merge upstream, regenerate generated files, re-point migrations
+sync-fork: ## Merge upstream, regenerate generated files, merge migration heads
 	@echo -e "$(CYAN)Syncing with upstream...$(NC)"
 	@$(UV) run python scripts/sync_fork.py
 	@echo -e "$(GREEN)✓ Merge staged — review, run tests, then commit$(NC)"
