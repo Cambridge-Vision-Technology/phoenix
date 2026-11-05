@@ -190,7 +190,7 @@
         pnpmWorkspaces = [ "phoenix-ui..." ];
         fetcherVersion = 4;
         # Generated with: nix build ./phoenix#frontend (fetchPnpmDeps, fetcherVersion 4).
-        hash = "sha256-NbIdFUxgE9joQxDQgiALyvxgLvJhuQo/skIWI7BakPo=";
+        hash = "sha256-WoNUJGio+D5rUAtkA9SO4d5/3k2/xT8pZetrQTKNf5c=";
       };
       frontend = pkgs.stdenvNoCC.mkDerivation {
         pname = "phoenix-frontend";
