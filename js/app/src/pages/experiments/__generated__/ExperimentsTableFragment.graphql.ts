@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<3cdf51f9ffd5d31732a274da87a0f7e6>>
+ * @generated SignedSource<<c264c165e2c4a85eeb881ba0ba460b94>>
  * @lightSyntaxTransform
  */
 
@@ -25,7 +25,9 @@ export type ExperimentsTableFragment$data = {
       };
     };
     readonly errorRate: number | null;
+    readonly expectedRunCount: number;
     readonly id: string;
+    readonly metadata: any;
     readonly runCount: number;
   } | null;
   readonly datasetEvaluators: {
@@ -162,17 +164,31 @@ v4 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "averageRunLatencyMs",
+  "name": "expectedRunCount",
   "storageKey": null
 },
 v5 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
+  "name": "metadata",
+  "storageKey": null
+},
+v6 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "averageRunLatencyMs",
+  "storageKey": null
+},
+v7 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
   "name": "errorRate",
   "storageKey": null
 },
-v6 = [
+v8 = [
   {
     "alias": null,
     "args": null,
@@ -188,52 +204,52 @@ v6 = [
     "storageKey": null
   }
 ],
-v7 = {
+v9 = {
   "alias": null,
   "args": null,
   "concreteType": "CostBreakdown",
   "kind": "LinkedField",
   "name": "total",
   "plural": false,
-  "selections": (v6/*:: as any*/),
-  "storageKey": null
-},
-v8 = {
-  "alias": null,
-  "args": null,
-  "kind": "ScalarField",
-  "name": "meanScore",
-  "storageKey": null
-},
-v9 = {
-  "alias": null,
-  "args": null,
-  "kind": "ScalarField",
-  "name": "name",
+  "selections": (v8/*:: as any*/),
   "storageKey": null
 },
 v10 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "__typename",
+  "name": "meanScore",
   "storageKey": null
 },
 v11 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "optimizationDirection",
+  "name": "name",
   "storageKey": null
 },
 v12 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "lowerBound",
+  "name": "__typename",
   "storageKey": null
 },
 v13 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "optimizationDirection",
+  "storageKey": null
+},
+v14 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "lowerBound",
+  "storageKey": null
+},
+v15 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
@@ -323,6 +339,8 @@ return {
         (v3/*:: as any*/),
         (v4/*:: as any*/),
         (v5/*:: as any*/),
+        (v6/*:: as any*/),
+        (v7/*:: as any*/),
         {
           "alias": null,
           "args": null,
@@ -331,7 +349,7 @@ return {
           "name": "costSummary",
           "plural": false,
           "selections": [
-            (v7/*:: as any*/)
+            (v9/*:: as any*/)
           ],
           "storageKey": null
         },
@@ -344,7 +362,7 @@ return {
           "plural": true,
           "selections": [
             (v2/*:: as any*/),
-            (v8/*:: as any*/)
+            (v10/*:: as any*/)
           ],
           "storageKey": null
         }
@@ -381,7 +399,7 @@ return {
               "name": "node",
               "plural": false,
               "selections": [
-                (v9/*:: as any*/),
+                (v11/*:: as any*/),
                 {
                   "alias": null,
                   "args": null,
@@ -390,12 +408,12 @@ return {
                   "name": "outputConfigs",
                   "plural": true,
                   "selections": [
-                    (v10/*:: as any*/),
+                    (v12/*:: as any*/),
                     {
                       "kind": "InlineFragment",
                       "selections": [
-                        (v9/*:: as any*/),
                         (v11/*:: as any*/),
+                        (v13/*:: as any*/),
                         {
                           "alias": null,
                           "args": null,
@@ -428,10 +446,10 @@ return {
                     {
                       "kind": "InlineFragment",
                       "selections": [
-                        (v9/*:: as any*/),
                         (v11/*:: as any*/),
-                        (v12/*:: as any*/),
-                        (v13/*:: as any*/)
+                        (v13/*:: as any*/),
+                        (v14/*:: as any*/),
+                        (v15/*:: as any*/)
                       ],
                       "type": "ContinuousAnnotationConfig",
                       "abstractKey": null
@@ -439,8 +457,8 @@ return {
                     {
                       "kind": "InlineFragment",
                       "selections": [
-                        (v9/*:: as any*/),
                         (v11/*:: as any*/),
+                        (v13/*:: as any*/),
                         {
                           "alias": null,
                           "args": null,
@@ -448,8 +466,8 @@ return {
                           "name": "threshold",
                           "storageKey": null
                         },
-                        (v12/*:: as any*/),
-                        (v13/*:: as any*/)
+                        (v14/*:: as any*/),
+                        (v15/*:: as any*/)
                       ],
                       "type": "FreeformAnnotationConfig",
                       "abstractKey": null
@@ -491,7 +509,7 @@ return {
               "plural": false,
               "selections": [
                 (v1/*:: as any*/),
-                (v9/*:: as any*/),
+                (v11/*:: as any*/),
                 {
                   "alias": null,
                   "args": null,
@@ -520,22 +538,10 @@ return {
                   "name": "createdAt",
                   "storageKey": null
                 },
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "metadata",
-                  "storageKey": null
-                },
                 (v5/*:: as any*/),
+                (v7/*:: as any*/),
                 (v3/*:: as any*/),
-                {
-                  "alias": null,
-                  "args": null,
-                  "kind": "ScalarField",
-                  "name": "expectedRunCount",
-                  "storageKey": null
-                },
+                (v4/*:: as any*/),
                 {
                   "alias": null,
                   "args": null,
@@ -543,7 +549,7 @@ return {
                   "name": "repetitions",
                   "storageKey": null
                 },
-                (v4/*:: as any*/),
+                (v6/*:: as any*/),
                 {
                   "alias": null,
                   "args": null,
@@ -581,7 +587,7 @@ return {
                           "plural": false,
                           "selections": [
                             (v1/*:: as any*/),
-                            (v9/*:: as any*/),
+                            (v11/*:: as any*/),
                             {
                               "alias": null,
                               "args": null,
@@ -606,7 +612,7 @@ return {
                   "name": "costSummary",
                   "plural": false,
                   "selections": [
-                    (v7/*:: as any*/),
+                    (v9/*:: as any*/),
                     {
                       "alias": null,
                       "args": null,
@@ -614,7 +620,7 @@ return {
                       "kind": "LinkedField",
                       "name": "prompt",
                       "plural": false,
-                      "selections": (v6/*:: as any*/),
+                      "selections": (v8/*:: as any*/),
                       "storageKey": null
                     },
                     {
@@ -624,7 +630,7 @@ return {
                       "kind": "LinkedField",
                       "name": "completion",
                       "plural": false,
-                      "selections": (v6/*:: as any*/),
+                      "selections": (v8/*:: as any*/),
                       "storageKey": null
                     }
                   ],
@@ -639,7 +645,7 @@ return {
                   "plural": true,
                   "selections": [
                     (v2/*:: as any*/),
-                    (v8/*:: as any*/),
+                    (v10/*:: as any*/),
                     {
                       "alias": null,
                       "args": null,
@@ -718,7 +724,7 @@ return {
               "name": "node",
               "plural": false,
               "selections": [
-                (v10/*:: as any*/)
+                (v12/*:: as any*/)
               ],
               "storageKey": null
             }
@@ -759,6 +765,6 @@ return {
 };
 })();
 
-(node as any).hash = "1f43803ba5c929080ce7453a214b11cf";
+(node as any).hash = "52b8c7514ec51a21ecf318377ccf9927";
 
 export default node;

@@ -43,13 +43,16 @@ annotationChart input =
   , scoreLabel: if pooled then "pooled native percentage" else "mean score"
   , domain: if pooled then Data.Nullable.notNull [ 0.0, 100.0 ] else Data.Nullable.null
   , description: if pooled then Data.Nullable.notNull "Pooled native counts. Historical case means remain in the table's detailed columns; baselines require matching benchmark provenance." else Data.Nullable.null
-  , emptyMessage: if pooled then Data.Nullable.notNull (Data.Maybe.maybe "Pooled scores unavailable" (\value -> "Unavailable — " <> value.status) (Data.Array.head selectedCells)) else Data.Nullable.null
+  , emptyMessage: if pooled then Data.Nullable.notNull (Data.Maybe.maybe "Pooled scores unavailable" (\value -> value.text <> " — " <> value.status) emptyCell) else Data.Nullable.null
   }
   where
   views = map (model input.datasetId) input.experiments
   baselineView = model input.datasetId <$> Data.Nullable.toMaybe input.baseline
   pooled = Data.Array.elem input.annotationName [ "PHI handled % v2", "Non-PHI spans preserved % v2" ] && (Data.Array.any _.eligible views || Data.Maybe.maybe false _.eligible baselineView)
   selectedCells = Data.Array.mapMaybe (cell input.annotationName) views
+  emptyCell = case Data.Array.find (\value -> value.text == "Unavailable") selectedCells of
+    Data.Maybe.Just value -> Data.Maybe.Just value
+    Data.Maybe.Nothing -> Data.Array.head selectedCells
   reference = do
     baseline <- Data.Nullable.toMaybe input.baseline
     if comparable baseline then Data.Maybe.Just (point baseline) else Data.Maybe.Nothing
