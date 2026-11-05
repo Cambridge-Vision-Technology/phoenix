@@ -1,7 +1,7 @@
 {
   "build": {
     "module": "Phoenix.Frontend.Build",
-    "dependencies": ["prelude", "effect", "arrays", "exceptions", "node-process", "foldable-traversable"],
+    "dependencies": ["prelude", "effect", "arrays", "exceptions", "node-process", "foldable-traversable", "node-fs"],
     "sources": ["nix/tools/Phoenix/Frontend/Build.purs"],
     "platform": ["tools/Platform/Node/Build.purs", "tools/Platform/Node/Build.js"]
   },
