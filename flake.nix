@@ -49,6 +49,7 @@
       pythonToolInputs = builtins.fromJSON (builtins.readFile ./nix/python-tool-inputs.json);
       packageToolInputs = builtins.fromJSON (builtins.readFile ./nix/package-tool-inputs.json);
       smokeInputs = builtins.fromJSON (builtins.readFile ./nix/package-smoke-inputs.json);
+      uiInputs = builtins.fromJSON (builtins.readFile ./nix/ui-inputs.json);
       allToolInputs = toolInputs // pythonToolInputs // packageToolInputs;
       source =
         paths:
@@ -111,6 +112,20 @@
           module = allToolInputs.${name}.module;
         }
       ) tooling;
+      uiProject = purs.purs {
+        srcs = [ "${source uiInputs.sources}/ui" ];
+        dependencies = uiInputs.dependencies;
+      };
+      uiTestProject = purs.purs {
+        srcs = [
+          "${source (uiInputs.sources ++ uiInputs.tests)}/ui"
+          "${source (uiInputs.sources ++ uiInputs.tests)}/ui-test"
+        ];
+        dependencies = uiInputs.dependencies ++ [ "assert" ];
+      };
+      uiBundle = toolingPkgs.runCommand "phoenix-legend-summary.mjs" { } ''
+        exec ${toolingPkgs.esbuild}/bin/esbuild ${uiProject.output { }}/${uiInputs.module}/index.js --bundle --format=esm --platform=browser --target=es2022 --minify --legal-comments=none --outfile=$out
+      '';
       platformInventory = builtins.fromJSON (builtins.readFile (inputs.platform + "/nix/inputs.json"));
       inventoryProject = purs.purs {
         srcs = [ "${platformSource platformInventory.inventoryRunner}/tools" ];
@@ -134,27 +149,32 @@
           ];
         }).script
           { module = "Build.CheckRunner"; };
-      toolChecks = builtins.mapAttrs (
-        name: project:
+      uiImplementation = toolingPkgs.runCommand "phoenix-legend-summary-implementation" { } ''
+        exec ${toolingPkgs.coreutils}/bin/timeout 60s ${checkRunner} "$out" ${
+          source (uiInputs.sources ++ uiInputs.tests)
+        } ${uiTestProject.script { module = "Phoenix.LegendSummaryTest"; }}
+      '';
+      uiGeneratedCheck = toolingPkgs.runCommand "phoenix-legend-summary-generated" { } ''
+        exec ${toolingPkgs.coreutils}/bin/timeout 60s ${checkRunner} "$out" ${
+          source [ "js/app/src/legend/summary.generated.js" ]
+        } ${tools.build} check-generated ${uiBundle} ${
+          source [ "js/app/src/legend/summary.generated.js" ]
+        }/js/app/src/legend/summary.generated.js
+      '';
+      uiLint = toolingPkgs.runCommand "phoenix-legend-summary-lint" { } ''
+        exec ${checkRunner} "$out" ${source (uiInputs.sources ++ uiInputs.tests ++ [ "whine.yaml" ])} ${
+          inputs.purescript-whine.packages.${system}.default
+        }/bin/whine 'ui/**/*.purs' 'ui-test/**/*.purs'
+      '';
+      inventoryCheck =
+        name: project: roots: groups:
         let
-          entry = allToolInputs.${name};
           context = toolingPkgs.writeText "frontend-${name}-inventory.json" (
             builtins.toJSON {
-              inherit name;
+              inherit name roots groups;
               backend = "node";
               compiler = "${purs.purescript}/bin/purs";
               compilation = project.output { codegen = "corefn,js"; };
-              roots = [ entry.module ];
-              groups = [
-                {
-                  root = source entry.sources;
-                  files = entry.sources;
-                }
-              ]
-              ++ pkgs.lib.optional (entry.platform != [ ]) {
-                root = platformSource entry.platform;
-                files = entry.platform;
-              };
               dependencies = project.dependencies;
             }
           );
@@ -162,8 +182,43 @@
         toolingPkgs.runCommand "phoenix-frontend-${name}-inventory" { } ''
           set -euo pipefail
           exec ${toolingPkgs.coreutils}/bin/timeout 60s ${inventoryTool} "$out" ${context}
-        ''
+        '';
+      toolChecks = builtins.mapAttrs (
+        name: project:
+        let
+          entry = allToolInputs.${name};
+        in
+        inventoryCheck name project [ entry.module ] (
+          [
+            {
+              root = source entry.sources;
+              files = entry.sources;
+            }
+          ]
+          ++ pkgs.lib.optional (entry.platform != [ ]) {
+            root = platformSource entry.platform;
+            files = entry.platform;
+          }
+        )
       ) tooling;
+      uiInputCheck =
+        inventoryCheck "legend-summary" uiProject
+          [ uiInputs.module ]
+          [
+            {
+              root = source uiInputs.sources;
+              files = uiInputs.sources;
+            }
+          ];
+      uiTestInputCheck =
+        inventoryCheck "legend-summary-implementation" uiTestProject
+          [ uiInputs.module "Phoenix.LegendSummaryTest" ]
+          [
+            {
+              root = source (uiInputs.sources ++ uiInputs.tests);
+              files = uiInputs.sources ++ uiInputs.tests;
+            }
+          ];
       pnpmBinary = pkgs.fetchzip {
         url = "https://registry.npmjs.org/@pnpm/exe.linux-x64/-/exe.linux-x64-12.0.0.tgz";
         hash = "sha256-67iuIkleZ4f3ZcBsBPPyaYNvzvOcrUAED+UVDVcpXgw=";
@@ -210,6 +265,26 @@
         buildPhase = ''
           set -euo pipefail
           exec ${tools.build} build "$out" "$PWD" ${pnpm}/bin/pnpm
+        '';
+        dontInstall = true;
+        dontFixup = true;
+      };
+      frontendTypecheck = pkgs.stdenvNoCC.mkDerivation {
+        name = "phoenix-frontend-typecheck";
+        src = source (inventory.dependencies ++ inventory.sources);
+        inherit pnpmDeps;
+        pnpmRoot = "js";
+        pnpmWorkspaces = [ "phoenix-ui..." ];
+        nativeBuildInputs = [
+          pkgs.nodejs_26
+          pnpm
+          pkgs.pnpmConfigHook
+        ];
+        pnpm_config_verify_deps_before_run = "false";
+        pnpm_config_offline = "true";
+        buildPhase = ''
+          set -euo pipefail
+          exec ${tools.build} typecheck "$out" "$PWD" ${pnpm}/bin/pnpm
         '';
         dontInstall = true;
         dontFixup = true;
@@ -561,6 +636,7 @@
     {
       packages.${system} = {
         inherit frontend;
+        legend-summary = uiBundle;
         frontend-inputs-discovery = frontendInputDiscovery;
         python-inputs-discovery = pythonInputDiscovery;
         python-source = pythonSet.arize-phoenix;
@@ -570,6 +646,20 @@
         default = phoenix;
       };
       checks.${system} = {
+        test-legend-summary-implementation = uiImplementation;
+        legend-summary-generated = uiGeneratedCheck;
+        legend-summary-lint = uiLint;
+        legend-summary-inputs = pkgs.linkFarm "phoenix-legend-summary-inputs" [
+          {
+            name = "browser";
+            path = uiInputCheck;
+          }
+          {
+            name = "implementation";
+            path = uiTestInputCheck;
+          }
+        ];
+        frontend-typecheck = frontendTypecheck;
         package-smoke = packageSmoke;
         package-tool-lint = packageLint;
         package-tool-inputs =
@@ -602,6 +692,19 @@
         );
       };
       apps.${system} = {
+        purescript-format = {
+          type = "app";
+          program = "${inputs.purs-nix.inputs.ps-tools.legacyPackages.${system}.purs-tidy}/bin/purs-tidy";
+        };
+        legend-summary-export = {
+          type = "app";
+          program = toString (
+            toolingPkgs.writeShellScript "phoenix-legend-summary-export" ''
+              set -euo pipefail
+              exec ${tools.build} export-generated ${uiBundle} "$@"
+            ''
+          );
+        };
         frontend-inputs = {
           type = "app";
           program = toString (

@@ -1,0 +1,6 @@
+{
+  "module": "Phoenix.LegendSummary.Browser",
+  "sources": ["ui/Phoenix/LegendSummary.purs", "ui/Phoenix/LegendSummary/Json.purs", "ui/Phoenix/LegendSummary/Chart.purs", "ui/Phoenix/LegendSummary/Browser.purs"],
+  "tests": ["ui-test/Phoenix/LegendSummaryTest.purs"],
+  "dependencies": ["prelude", "effect", "arrays", "either", "maybe", "nullable", "numbers", "integers", "strings", "foldable-traversable", "argonaut-core", "argonaut-codecs", "foreign-object", "tuples"]
+}

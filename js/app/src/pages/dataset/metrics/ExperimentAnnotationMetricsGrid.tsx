@@ -4,7 +4,6 @@ import { Suspense, useState } from "react";
 
 import {
   AnnotationMetricsChart,
-  type AnnotationMetricsInputPoint,
   AnnotationMetricsViewMenu,
   ChartPanel,
   ChartPanelSkeleton,
@@ -16,6 +15,7 @@ import {
 import { ErrorBoundary } from "@phoenix/components/exception";
 import { EXPERIMENT_METRICS_EXPERIMENT_COUNT } from "@phoenix/pages/dataset/constants";
 
+import { annotationChart } from "../../../legend/summary.generated.js";
 import {
   ExperimentBaselineDistributionSeparator,
   ExperimentBaselineValueLine,
@@ -33,10 +33,7 @@ import {
   EXPERIMENT_METRICS_CHART_SYNC_ID,
   RECENT_EXPERIMENT_SELECTION,
 } from "./types";
-import {
-  useExperimentAnnotationMetricData,
-  type ExperimentAnnotationMetricDatum,
-} from "./useExperimentAnnotationMetricData";
+import { useExperimentAnnotationMetricData } from "./useExperimentAnnotationMetricData";
 import { useExperimentAnnotationMetricNames } from "./useExperimentAnnotationMetricNames";
 
 const annotationGridCSS = css`
@@ -150,12 +147,15 @@ function useExperimentAnnotationMetricSeries({
   const { experiments, baselineExperiment } = useExperimentAnnotationMetricData(
     { datasetId, annotationName, experimentSelection }
   );
+  const projection = annotationChart({
+    datasetId,
+    annotationName,
+    experiments,
+    baseline: baselineExperiment,
+  });
   const annotationSeries = normalizeAnnotationMetrics({
-    points: experiments.map(toAnnotationMetricsInputPoint),
-    referencePoint:
-      baselineExperiment == null
-        ? undefined
-        : toAnnotationMetricsInputPoint(baselineExperiment),
+    points: projection.points,
+    referencePoint: projection.referencePoint ?? undefined,
   });
 
   return {
@@ -167,6 +167,7 @@ function useExperimentAnnotationMetricSeries({
     },
     baselineSequenceNumber: baselineExperiment?.sequenceNumber,
     experiments,
+    projection,
   };
 }
 
@@ -215,7 +216,7 @@ function ExperimentAnnotationMetricPanelContent({
   experimentSelection: ExperimentSelection;
   fillHeight: boolean;
 }) {
-  const { series, baselineSequenceNumber, experiments } =
+  const { series, baselineSequenceNumber, experiments, projection } =
     useExperimentAnnotationMetricSeries({
       datasetId,
       annotationName,
@@ -228,14 +229,17 @@ function ExperimentAnnotationMetricPanelContent({
   );
   // A refetch can change the visible annotation shape while preserving this
   // keyed panel, so fall back when its previous view is no longer available.
-  const activeView = series.views.includes(view)
-    ? view
-    : getDefaultAnnotationMetricsView(series);
+  const activeView = projection.pooled
+    ? "scores"
+    : series.views.includes(view)
+      ? view
+      : getDefaultAnnotationMetricsView(series);
   const { reference } = series;
   const showViewToggle = series.views.length > 1;
   return (
     <ChartPanel
       title={series.name}
+      subtitle={projection.description ?? undefined}
       fillHeight={fillHeight}
       actions={
         showViewToggle ? (
@@ -244,6 +248,8 @@ function ExperimentAnnotationMetricPanelContent({
       }
     >
       <AnnotationMetricsChart
+        scoreLabel={projection.scoreLabel}
+        scoreDomain={projection.domain ?? undefined}
         series={series}
         view={activeView}
         xAxisProps={{
@@ -262,6 +268,7 @@ function ExperimentAnnotationMetricPanelContent({
         syncId={EXPERIMENT_METRICS_CHART_SYNC_ID}
         chartType={CHART_TYPE_BY_SELECTION_TYPE[experimentSelection.type]}
         emptyStateMessage={
+          projection.emptyMessage ??
           EMPTY_STATE_MESSAGE_BY_SELECTION_TYPE[experimentSelection.type]
         }
         additionalLegendItems={getExperimentBaselineLegendItems({
@@ -296,22 +303,4 @@ function ExperimentAnnotationMetricPanelContent({
       />
     </ChartPanel>
   );
-}
-
-function toAnnotationMetricsInputPoint(
-  experiment: ExperimentAnnotationMetricDatum
-): AnnotationMetricsInputPoint {
-  return {
-    x: experiment.sequenceNumber,
-    metadata: {
-      experimentName: experiment.name,
-      experimentId: experiment.id,
-      isBaseline: experiment.isBaseline,
-    },
-    summaries: experiment.annotationSummaries.map((summary) => ({
-      name: summary.annotationName,
-      meanScore: summary.meanScore,
-      labelFractions: summary.labelFractions,
-    })),
-  };
 }

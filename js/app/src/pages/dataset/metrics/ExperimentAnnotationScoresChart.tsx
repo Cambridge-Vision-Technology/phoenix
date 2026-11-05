@@ -28,6 +28,7 @@ import { useTheme } from "@phoenix/contexts";
 import { getWordColor } from "@phoenix/utils/colorUtils";
 import { formatFloat } from "@phoenix/utils/numberFormatUtils";
 
+import { combinedChart } from "../../../legend/summary.generated.js";
 import type { ExperimentMetricsTooltipDatum } from "./ExperimentMetricsTooltipContent";
 import { ExperimentMetricsTooltipHeader } from "./ExperimentMetricsTooltipHeader";
 import { useExperimentChartDatum } from "./experimentSelection";
@@ -78,7 +79,7 @@ function TooltipContent({
 }
 
 /**
- * Mean annotation scores, with one line per annotation, per experiment.
+ * Versioned pooled headlines and detailed native case means per experiment.
  */
 export function ExperimentAnnotationScoresChart({
   datasetId,
@@ -93,46 +94,33 @@ export function ExperimentAnnotationScoresChart({
     useExperimentChartDatum(experimentSelection);
   const isComparedSelection = experimentSelection.type === "compared";
 
-  const scoreKeySet = new Set<string>();
-  const chartData = experiments.map((experiment) => {
-    const scores: Record<string, number | undefined> = {};
-    for (const summary of experiment.annotationSummaries) {
-      scoreKeySet.add(summary.annotationName);
-      scores[summary.annotationName] = summary.meanScore ?? undefined;
-    }
-    return {
-      ...scores,
-      ...toExperimentChartDatum(experiment),
-    };
-  });
-  const scoreKeys = Array.from(scoreKeySet);
-
   const { hiddenDataKeys, isDataKeyHidden, toggleDataKey } =
     useInteractiveLegend();
+  const projection = combinedChart({
+    datasetId,
+    experiments,
+    hiddenDataKeys: Array.from(hiddenDataKeys, String),
+  });
+  const chartData = experiments.map((experiment, index) => ({
+    ...projection.rows[index].scores,
+    ...toExperimentChartDatum(experiment),
+  }));
+  const scoreKeys = projection.keys;
+  const hasData = projection.hasData;
 
-  // Snap the score axis to [0, 1] when every visible score fits in it, so
-  // normalized scores read consistently across experiments
-  const visibleScoreKeys = scoreKeys.filter(
-    (scoreKey) => !hiddenDataKeys.has(scoreKey)
-  );
+  // The projection fixes the axis for scores it knows the range of. Any others get a
+  // rounded axis over what is currently visible.
   const visibleScores = chartData.flatMap((dataPoint) =>
-    visibleScoreKeys.flatMap((scoreKey) => {
-      const scoreValue = dataPoint[scoreKey as keyof typeof dataPoint];
-      return typeof scoreValue === "number" ? [scoreValue] : [];
-    })
+    scoreKeys
+      .filter((scoreKey) => !hiddenDataKeys.has(scoreKey))
+      .flatMap((scoreKey) => {
+        const scoreValue = dataPoint[scoreKey as keyof typeof dataPoint];
+        return typeof scoreValue === "number" ? [scoreValue] : [];
+      })
   );
-  const yAxis: Partial<RoundedLinearAxis> =
-    visibleScores.length > 0 &&
-    visibleScores.every((score) => score >= 0 && score <= 1)
-      ? { domain: [0, 1] }
-      : (getRoundedLinearAxis({ values: visibleScores }) ?? {});
-
-  const hasData = chartData.some((dataPoint) =>
-    scoreKeys.some(
-      (scoreKey) =>
-        typeof dataPoint[scoreKey as keyof typeof dataPoint] === "number"
-    )
-  );
+  const yAxis: Partial<RoundedLinearAxis> = projection.domain
+    ? { domain: projection.domain }
+    : (getRoundedLinearAxis({ values: visibleScores }) ?? {});
 
   return (
     <ChartEmptyStateOverlay

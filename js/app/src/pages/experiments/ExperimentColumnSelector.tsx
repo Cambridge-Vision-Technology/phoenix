@@ -18,6 +18,7 @@ type ExperimentColumnSelectorProps<T extends RowData> = {
   columnVisibility: Record<string, boolean>;
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
   columnOrder: string[];
+  columnLabels?: Record<string, string | undefined>;
   onColumnOrderChange: (columnOrder: string[]) => void;
 };
 
@@ -35,6 +36,7 @@ export function ExperimentColumnSelector<T extends RowData>({
   columnVisibility,
   onColumnVisibilityChange,
   columnOrder,
+  columnLabels = {},
   onColumnOrderChange,
 }: ExperimentColumnSelectorProps<T>) {
   // The pinned columns sit at the edges of the table and are neither hidable
@@ -59,7 +61,7 @@ export function ExperimentColumnSelector<T extends RowData>({
     return [
       {
         id,
-        label: getColumnLabel(column),
+        label: columnLabels[id] ?? getColumnLabel(column),
         isVisibilityToggleDisabled: UN_HIDABLE_COLUMN_IDS.includes(id),
       },
     ];
