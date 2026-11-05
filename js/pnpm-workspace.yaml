@@ -75,3 +75,5 @@ overrides:
   "hono": "4.12.31"
   # Still load-bearing: @langchain/core and @braintrust/core pin uuid 9.x/10.x.
   "uuid@<11.1.1": ">=11.1.1"
+  # oxfmt pins tinypool 2.1.0 (GHSA-5gmw-xhrv-c9v3); drop once oxfmt depends on >=2.1.1.
+  "tinypool@<2.1.1": ">=2.1.1"
