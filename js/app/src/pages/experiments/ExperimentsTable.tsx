@@ -103,6 +103,12 @@ import {
 } from "@phoenix/utils/numberFormatUtils";
 import { makeSafeColumnId } from "@phoenix/utils/tableUtils";
 
+import {
+  columnLabels as pooledColumnLabels,
+  columns as pooledHeadlineColumns,
+  projectExperiment,
+  visibility as pooledColumnVisibility,
+} from "../../legend/summary.generated.js";
 import type {
   ExperimentsTableFragment$data,
   ExperimentsTableFragment$key,
@@ -116,6 +122,7 @@ import { useExperimentsDeltasViewSetting } from "./experimentsDeltasViewSetting"
 import { ExperimentSelectionToolbar } from "./ExperimentSelectionToolbar";
 import { useExperimentsMetricChartsViewSetting } from "./ExperimentsMetricsCharts";
 import { ExperimentsMetricsChartSelector } from "./ExperimentsMetricsChartSelector";
+import { PooledBenchmarkCell } from "./PooledBenchmarkCell";
 
 const PAGE_SIZE = 100;
 
@@ -260,6 +267,8 @@ export function ExperimentsTable({
           baselineExperiment {
             id
             runCount
+            expectedRunCount
+            metadata
             averageRunLatencyMs
             errorRate
             costSummary {
@@ -373,7 +382,6 @@ export function ExperimentsTable({
     experimentJobStatus: false,
     experimentJobProgress: false,
   });
-  const columnVisibility = { ...storedColumnVisibility };
   const [columnSizing, setColumnSizing] = usePersistedState<
     Record<string, number>
   >(`${EXPERIMENTS_TABLE_STORAGE_KEY_PREFIX}sizing-${data.id}`, {});
@@ -409,9 +417,20 @@ export function ExperimentsTable({
         return {
           ...edge.experiment,
           annotationSummaryMap,
+          legendHeadlines: projectExperiment({
+            datasetId: data.id,
+            experiment: edge.experiment,
+            baseline: data.baselineExperiment,
+            showDeltas: deltasViewSetting.isEnabled,
+          }),
         };
       }),
-    [data.experiments.edges]
+    [
+      data.experiments.edges,
+      data.baselineExperiment,
+      data.id,
+      deltasViewSetting.isEnabled,
+    ]
   );
 
   const hasRunningExperiments = useMemo(
@@ -442,6 +461,36 @@ export function ExperimentsTable({
       filter(evaluators, "outputConfigs.length")
     )
   );
+  const headlineViews = tableData.map((row) => row.legendHeadlines);
+  const annotationNames = data.experimentAnnotationSummaries.map(
+    (summary) => summary.annotationName
+  );
+  const columnVisibility = pooledColumnVisibility({
+    views: headlineViews,
+    stored: storedColumnVisibility,
+    annotationPrefix: ANNOTATION_COLUMN_PREFIX,
+    annotationNames,
+    configuredNames: Object.keys(configuredAnnotationConfigByName),
+  });
+  const projectedColumnLabels = pooledColumnLabels({
+    views: headlineViews,
+    annotationPrefix: ANNOTATION_COLUMN_PREFIX,
+    annotationNames,
+  });
+  const headlineColumns: ColumnDef<TableRow>[] = pooledHeadlineColumns(
+    headlineViews
+  ).map((definition) => ({
+    id: definition.id,
+    header: definition.title,
+    size: 220,
+    minSize: 160,
+    meta: { textAlign: "right" },
+    cell: ({ row }) => (
+      <PooledBenchmarkCell
+        model={row.original.legendHeadlines[definition.field]}
+      />
+    ),
+  }));
   /**
    * Whether the numeric columns hold a delta slot: a baseline is set and the
    * deltas are shown. The baseline row keeps the slot empty so its values
@@ -616,9 +665,6 @@ export function ExperimentsTable({
   const annotationColumns: ColumnDef<TableRow>[] =
     data.experimentAnnotationSummaries.map((annotationSummary) => {
       const { annotationName, minScore, maxScore } = annotationSummary;
-      columnVisibility[`${ANNOTATION_COLUMN_PREFIX}${annotationName}`] ??=
-        Object.keys(configuredAnnotationConfigByName).length === 0 ||
-        Object.hasOwn(configuredAnnotationConfigByName, annotationName);
       return {
         header: () => (
           <Flex
@@ -627,7 +673,11 @@ export function ExperimentsTable({
             alignItems="center"
             justifyContent="end"
           >
-            <Text>{annotationName}</Text>
+            <Text>
+              {projectedColumnLabels[
+                `${ANNOTATION_COLUMN_PREFIX}${annotationName}`
+              ] ?? annotationName}
+            </Text>
             <AnnotationColorSwatch annotationName={annotationName} />
           </Flex>
         ),
@@ -865,7 +915,13 @@ export function ExperimentsTable({
     },
   ];
 
-  const columns = [...baseColumns, ...annotationColumns, ...tailColumns];
+  const columns = [
+    ...baseColumns.slice(0, 3),
+    ...headlineColumns,
+    ...baseColumns.slice(3),
+    ...annotationColumns,
+    ...tailColumns,
+  ];
   const {
     leafColumnOrder,
     visibleColumnOrder,
@@ -973,6 +1029,7 @@ export function ExperimentsTable({
           </View>
           <ExperimentsMetricsChartSelector />
           <ExperimentColumnSelector
+            columnLabels={projectedColumnLabels}
             columns={selectorColumns}
             columnVisibility={columnVisibility}
             onColumnVisibilityChange={setColumnVisibility}

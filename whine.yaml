@@ -2,6 +2,8 @@ rulePackages:
   - whine-core
 include:
   - nix/tools/**/*.purs
+  - ui/**/*.purs
+  - ui-test/**/*.purs
 rules:
   UndesirableFunctions:
     functions:
