@@ -194,7 +194,7 @@
       };
       frontend = pkgs.stdenvNoCC.mkDerivation {
         pname = "phoenix-frontend";
-        version = "20.25.0";
+        version = "21.0.0";
         src = source (inventory.dependencies ++ inventory.sources);
         inherit pnpmDeps;
         pnpmRoot = "js";
@@ -381,7 +381,7 @@
             buildInputs = (old.buildInputs or [ ]) ++ [ pkgs.stdenv.cc.cc.lib ];
           });
           arize-phoenix = prev.arize-phoenix.overrideAttrs {
-            version = "20.25.0";
+            version = "21.0.0";
             src = pkgs.symlinkJoin {
               name = "phoenix-python-source";
               paths = [
@@ -405,7 +405,7 @@
               pythonOverrides
             ]
           );
-      environment = pythonSet.mkVirtualEnv "phoenix-20.25.0" {
+      environment = pythonSet.mkVirtualEnv "phoenix-21.0.0" {
         arize-phoenix = [
           "container"
           "pg"
@@ -449,7 +449,7 @@
         }
       ];
       phoenix =
-        pkgs.runCommand "phoenix-20.25.0-native"
+        pkgs.runCommand "phoenix-21.0.0-native"
           {
             nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
             passthru.pythonEnvironment = environment;
