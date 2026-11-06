@@ -311,6 +311,16 @@ from the example editor, which stores the file and writes its
 `phoenix://media/<sha256>` reference into the example's input under the variable
 name you give it.
 
+### Several images in one variable
+
+When a prompt runs over a dataset on the server, a media variable can hold a list
+of `phoenix://media/<sha256>` references, and each item becomes its own image, in
+order. See [Passing several images to one variable](../../FORK.md#passing-several-images-to-one-variable).
+
+`to_openai` and `to_genai` do not accept lists yet. A list raises
+`MediaResolutionError`, so to run such an example through them, declare one image
+part per item instead.
+
 ### With Google ADK
 
 ADK takes the instruction as a constructor argument rather than inside a config
