@@ -137,7 +137,7 @@ async def test_each_example_is_held_to_its_own_response_format(
     _provider_url: str,
     api_type: str,
 ) -> None:
-    metadata = [
+    metadata: list[dict[str, Any]] = [
         {KEY: _format("from_example_one", "a")},
         {KEY: _format("from_example_two", "b")},
         {"unrelated": "metadata"},
