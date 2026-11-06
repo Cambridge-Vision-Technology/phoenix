@@ -1,19 +1,22 @@
 -r ci.txt
 asyncpg
+fastmcp-slim[client,server]==4.1.2
+graphql-core==3.3.1
 grpcio
-litellm>=1.83.14; python_version < '3.14'
+joserfc==1.7.6
+litellm>=1.83.14,!=1.107.0; python_version < '3.14'
 aioboto3
 # Note: OpenTelemetry packages must use versions released on the same date to ensure compatibility
-opentelemetry-exporter-otlp==1.45.0
-opentelemetry-instrumentation-fastapi==0.66b0
-opentelemetry-instrumentation-grpc==0.66b0
-opentelemetry-instrumentation-sqlalchemy==0.66b0
-opentelemetry-proto==1.45.0
-opentelemetry-sdk==1.45.0
-opentelemetry-semantic-conventions==0.66b0
+opentelemetry-exporter-otlp==1.45.1
+opentelemetry-instrumentation-grpc==0.66b1
+opentelemetry-instrumentation-sqlalchemy==0.66b1
+opentelemetry-proto==1.45.1
+opentelemetry-sdk==1.45.1
+opentelemetry-semantic-conventions==0.66b1
 pandas-stubs==2.0.3.230814
 pandas>=1.0
 prometheus_client
+pyasn1==0.6.5
 psycopg[binary,pool]
 py-grpc-prometheus
 pydantic-ai-slim[anthropic,bedrock,google,mcp,openai,ui]>=2.52.0

@@ -1298,6 +1298,26 @@ def _identity_decrypt(value: bytes) -> bytes:
     return value
 
 
+@pytest.mark.parametrize("seconds", [1, 900])
+async def test_builtin_openai_client_uses_configured_timeout(
+    db: DbSessionFactory, monkeypatch: pytest.MonkeyPatch, seconds: int
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("PHOENIX_OPENAI_CLIENT_TIMEOUT_SECONDS", str(seconds))
+    async with db() as session:
+        client = await _get_builtin_provider_client(
+            ModelProvider.OPENAI,
+            "gpt-4",
+            None,
+            None,
+            session,
+            _identity_decrypt,
+        )
+
+    async with client._client_factory() as sdk_client:
+        assert sdk_client.timeout == seconds
+
+
 class TestMiniMaxProvider:
     def test_registry_includes_target_models(self) -> None:
         assert (

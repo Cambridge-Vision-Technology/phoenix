@@ -53,7 +53,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing_extensions import TypeAlias, assert_never, override
 
-from phoenix.config import getenv
+from phoenix.config import get_env_openai_client_timeout_seconds, getenv
 from phoenix.db import models
 from phoenix.db.types.experiment_config import ConnectionConfig
 from phoenix.db.types.model_provider import (
@@ -3367,7 +3367,7 @@ async def _get_builtin_provider_client(
                 api_key=api_key,
                 base_url=base_url,
                 default_headers=headers,
-                timeout=30,
+                timeout=get_env_openai_client_timeout_seconds(),
             )
 
         client_factory: ClientFactory[AsyncOpenAI] = LLMClientFactory(

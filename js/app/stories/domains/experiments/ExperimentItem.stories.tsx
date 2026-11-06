@@ -6,6 +6,8 @@ import type { ExperimentCompareDetailsQuery$data } from "@phoenix/components/exp
 import { ExperimentItem } from "@phoenix/components/experiment/ExperimentCompareDetails";
 import { ExperimentCompareDetailsProvider } from "@phoenix/contexts/ExperimentCompareContext";
 
+import { experimentAnnotationConfigs } from "../../constants/experimentEvaluatorFixtures";
+
 type Experiment = NonNullable<
   ExperimentCompareDetailsQuery$data["dataset"]["experiments"]
 >["edges"][number]["experiment"];
@@ -71,9 +73,10 @@ const mockExperimentRepetition: ExperimentRepetition = {
         {
           annotation: {
             id: "ann-1",
-            name: "qa_correctness",
-            label: "correct",
-            score: 0.95,
+            name: "answer_relevance",
+            label: null,
+            score: 0.92,
+            explanation: "The response is relevant to the requested SQL query.",
             metadata: null,
             trace: {
               traceId: "eval-trace-111",
@@ -84,9 +87,11 @@ const mockExperimentRepetition: ExperimentRepetition = {
         {
           annotation: {
             id: "ann-2",
-            name: "has_results",
+            name: "column_coverage",
             label: null,
-            score: 1.0,
+            score: 0.5,
+            explanation:
+              '{"metric":{"explanation":"One of two expected columns is present.","numerator":1,"denominator":2,"unknown":0,"applicable":true}}',
             metadata: null,
             trace: {
               traceId: "eval-trace-222",
@@ -97,9 +102,10 @@ const mockExperimentRepetition: ExperimentRepetition = {
         {
           annotation: {
             id: "ann-3",
-            name: "sql_syntax_valid",
-            label: "valid",
-            score: 1.0,
+            name: "verbosity",
+            label: null,
+            score: 0.81,
+            explanation: null,
             metadata: null,
             trace: {
               traceId: "eval-trace-333",
@@ -167,9 +173,10 @@ const mockRepetitionExperimentRepetition: ExperimentRepetition = {
         {
           annotation: {
             id: "ann-4",
-            name: "qa_correctness",
+            name: "answer_relevance",
             label: null,
             score: 0.75,
+            explanation: null,
             metadata: null,
             trace: {
               traceId: "eval-trace-444",
@@ -184,17 +191,17 @@ const mockRepetitionExperimentRepetition: ExperimentRepetition = {
 
 const mockAnnotationSummaries: AnnotationSummaries = [
   {
-    annotationName: "qa_correctness",
+    annotationName: "answer_relevance",
     minScore: 0.0,
     maxScore: 1.0,
   },
   {
-    annotationName: "has_results",
+    annotationName: "column_coverage",
     minScore: 0.0,
     maxScore: 1.0,
   },
   {
-    annotationName: "sql_syntax_valid",
+    annotationName: "verbosity",
     minScore: 0.0,
     maxScore: 1.0,
   },
@@ -275,7 +282,7 @@ const Template: Story = (args) => {
           mockExperimentRepetitionsByExperimentId
         }
         annotationSummaries={annotationSummaries}
-        annotationConfigs={[]}
+        annotationConfigs={experimentAnnotationConfigs}
         includeRepetitions={includeRepetitions}
         openTraceDialog={() => {}}
         referenceOutput=""

@@ -17,6 +17,9 @@ const experimentAnnotationMetricFragment = graphql`
     name
     sequenceNumber
     isBaseline
+    metadata
+    runCount
+    expectedRunCount
     annotationSummaries(annotationName: $annotationName) {
       annotationName
       meanScore
@@ -79,6 +82,11 @@ export type ExperimentAnnotationMetricDatum = {
   name: string;
   sequenceNumber: number;
   isBaseline: boolean;
+  pooledSource?: {
+    metadata: unknown;
+    runCount: number;
+    expectedRunCount: number;
+  };
   annotationSummaries: readonly {
     annotationName: string;
     meanScore: number | null;
@@ -177,6 +185,11 @@ function readExperimentAnnotationMetricDatum(
     name: data.name,
     sequenceNumber: data.sequenceNumber,
     isBaseline: data.isBaseline,
+    pooledSource: {
+      metadata: data.metadata,
+      runCount: data.runCount,
+      expectedRunCount: data.expectedRunCount,
+    },
     // Missing from the store until the keyed refetch lands, despite the type.
     annotationSummaries: data.annotationSummaries ?? [],
   };

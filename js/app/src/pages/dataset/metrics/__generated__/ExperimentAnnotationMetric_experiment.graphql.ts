@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<3c27875a3b02007b5d97c487c8477116>>
+ * @generated SignedSource<<7e6dd6243aa9a552b5f3c12d2035840d>>
  * @lightSyntaxTransform
  */
 
@@ -18,9 +18,12 @@ export type ExperimentAnnotationMetric_experiment$data = {
     }>;
     readonly meanScore: number | null;
   }>;
+  readonly expectedRunCount: number;
   readonly id: string;
   readonly isBaseline: boolean;
+  readonly metadata: any;
   readonly name: string;
+  readonly runCount: number;
   readonly sequenceNumber: number;
   readonly " $fragmentType": "ExperimentAnnotationMetric_experiment";
 };
@@ -34,6 +37,6 @@ const node: ReaderInlineDataFragment = {
   "name": "ExperimentAnnotationMetric_experiment"
 };
 
-(node as any).hash = "4dd9463277a80e9f021d4c91b0125e34";
+(node as any).hash = "19529202793f86cb4bf6cfbc679bd212";
 
 export default node;
