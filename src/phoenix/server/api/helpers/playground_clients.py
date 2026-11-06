@@ -117,6 +117,7 @@ from phoenix.server.api.types.GenerativeProvider import (
 )
 from phoenix.utilities.json import jsonify
 
+from .google_vertex import VERTEX_RATE_LIMIT_CREDENTIAL, vertex_client_kwargs
 from .openai_response_format import default_openai_strict
 
 if TYPE_CHECKING:
@@ -3565,7 +3566,8 @@ async def _get_builtin_provider_client(
         if not api_key:
             api_key = getenv("GEMINI_API_KEY") or getenv("GOOGLE_API_KEY")
 
-        if not api_key:
+        vertex = vertex_client_kwargs()
+        if not api_key and not vertex:
             raise BadRequest(
                 "An API key is required for Google GenAI models. "
                 "Set the GEMINI_API_KEY environment variable or use a custom provider."
@@ -3576,12 +3578,17 @@ async def _get_builtin_provider_client(
         # AbstractAsyncContextManager (returns None instead of bool | None).
         @asynccontextmanager
         async def create_google_client() -> "AsyncIterator[GoogleAsyncClient]":
-            async with GoogleGenAIClient(api_key=api_key).aio as client:
+            async with GoogleGenAIClient(**(vertex or {"api_key": api_key})).aio as client:
                 yield client
 
         google_client_factory = cast(
             "LLMClientFactory[GoogleAsyncClient]",
-            LLMClientFactory(create_google_client, google_rate_limit_key(api_key, None)),
+            LLMClientFactory(
+                create_google_client,
+                google_rate_limit_key(
+                    VERTEX_RATE_LIMIT_CREDENTIAL if vertex else cast(str, api_key), None
+                ),
+            ),
         )
         if model_name in GEMINI_2_5_MODELS:
             return GoogleClient(

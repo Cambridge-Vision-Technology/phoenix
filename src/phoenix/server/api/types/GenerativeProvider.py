@@ -12,6 +12,8 @@ from phoenix.db.types.model_provider import ModelProvider
 from phoenix.server.api.context import Context
 from phoenix.trace.attributes import get_attribute_value
 
+from ..helpers.google_vertex import vertex_client_kwargs
+
 MINIMAX_MODEL_NAMES = ("MiniMax-M3.1-Flash", "MiniMax-M3")
 
 
@@ -303,6 +305,8 @@ class GenerativeProvider:
 
     @strawberry.field(description="Whether the credentials are set on the server for the provider")  # type: ignore
     async def credentials_set(self, info: Info[Context, None]) -> bool:
+        if self.key is GenerativeProviderKey.GOOGLE and vertex_client_kwargs():
+            return True
         credential_requirements = self.model_provider_to_credential_requirements_map.get(self.key)
         if credential_requirements is None:
             return True
