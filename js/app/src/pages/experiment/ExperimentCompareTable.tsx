@@ -75,6 +75,7 @@ import type {
 } from "./__generated__/ExperimentCompareTable_comparisons.graphql";
 import type { ExperimentCompareTableQuery as ExperimentCompareTableQueryType } from "./__generated__/ExperimentCompareTableQuery.graphql";
 import { useExperimentCompareDeltasViewSetting } from "./experimentCompareDeltasViewSetting";
+import { ExperimentCompareEvaluatorSummary } from "./ExperimentCompareEvaluatorSummary";
 import {
   ExperimentCompareChartSelector,
   useExperimentCompareChartsViewSetting,
@@ -424,11 +425,15 @@ export function ExperimentCompareTable(props: ExampleCompareTableProps) {
               executionState="idle"
               isPlaceholder={true}
             />
-            <ExperimentAnnotationAggregates
-              executionState="idle"
-              annotationConfigs={annotationConfigs}
-              isPlaceholder={true}
-            />
+            <ExperimentCompareEvaluatorSummary
+              evaluatorCount={annotationConfigs.length}
+            >
+              <ExperimentAnnotationAggregates
+                executionState="idle"
+                annotationConfigs={annotationConfigs}
+                isPlaceholder={true}
+              />
+            </ExperimentCompareEvaluatorSummary>
           </Flex>
         ),
         accessorKey: "referenceOutput",
@@ -502,14 +507,18 @@ export function ExperimentCompareTable(props: ExampleCompareTableProps) {
                   />
                 )}
               </div>
-              <ExperimentAnnotationAggregates
-                executionState="complete"
-                annotationConfigs={annotationConfigs}
-                annotationSummaries={experiment?.annotationSummaries ?? []}
-                baseAnnotationSummaries={
-                  deltaBaseExperiment?.annotationSummaries ?? undefined
-                }
-              />
+              <ExperimentCompareEvaluatorSummary
+                evaluatorCount={annotationConfigs.length}
+              >
+                <ExperimentAnnotationAggregates
+                  executionState="complete"
+                  annotationConfigs={annotationConfigs}
+                  annotationSummaries={experiment?.annotationSummaries ?? []}
+                  baseAnnotationSummaries={
+                    deltaBaseExperiment?.annotationSummaries ?? undefined
+                  }
+                />
+              </ExperimentCompareEvaluatorSummary>
             </Flex>
           );
         },
