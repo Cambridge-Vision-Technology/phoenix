@@ -155,7 +155,10 @@ async def test_a_malformed_response_format_fails_that_example_without_calling_th
     _app: _AppInfo,
     _provider_url: str,
 ) -> None:
-    metadata = [{KEY: {"type": "not_a_format"}}, {KEY: _format("from_example", "a")}]
+    metadata: list[dict[str, Any]] = [
+        {KEY: {"type": "not_a_format"}},
+        {KEY: _format("from_example", "a")},
+    ]
     async with httpx2.AsyncClient(base_url=_app.base_url, timeout=120) as client:
         runs, errors = await _run(client, metadata, _provider_url, "CHAT_COMPLETIONS")
 

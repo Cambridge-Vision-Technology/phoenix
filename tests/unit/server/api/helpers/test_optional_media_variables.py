@@ -124,7 +124,7 @@ class TestSuppliedButUnusableStillRaises:
     broken". A value that was supplied and is not a reference still fails loudly.
     """
 
-    @pytest.mark.parametrize("value", [123, 4.5, True, {"url": MEDIA_URL}, [MEDIA_URL]])
+    @pytest.mark.parametrize("value", [123, 4.5, True, {"url": MEDIA_URL}, [123]])
     def test_a_non_string_value_is_rejected(self, value: Any) -> None:
         with pytest.raises(BadRequest):
             run(

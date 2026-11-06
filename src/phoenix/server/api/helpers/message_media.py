@@ -308,6 +308,41 @@ def _media_variable_value(
     return value
 
 
+def _media_variable_urls(
+    variable: str,
+    template_variables: Mapping[str, Any],
+    *,
+    kind: str,
+) -> list[str]:
+    """
+    The media references a media variable supplies, in order.
+
+    A variable may hold a list, so one prompt can serve inputs of any length, such as the
+    pages of documents that differ in length. Each item fills the variable's position in
+    turn, and is checked exactly as a single value is: an empty item means nothing was
+    supplied there, and anything else that is not a reference is an error.
+
+    Args:
+        variable: The media variable's name.
+        template_variables: The values supplied for this run.
+        kind: Which kind of media the part expects, so the error names it correctly.
+
+    Returns:
+        The references to resolve, empty when this run supplied nothing for the slot.
+
+    Raises:
+        BadRequest: A supplied value or list item is not a reference string.
+    """
+    value = template_variables.get(variable)
+    items = value if isinstance(value, (list, tuple)) else [value]
+    urls = []
+    for item in items:
+        url = _media_variable_value(variable, {variable: item}, kind=kind)
+        if url is not None:
+            urls.append(url)
+    return urls
+
+
 def media_content_block(part: MediaContentPart) -> MediaContentBlock:
     """
     The block an image or file content part becomes.
@@ -370,17 +405,15 @@ def format_message_content(
                 )
             )
         elif (variable := block.get("variable")) is not None:
-            url = _media_variable_value(variable, template_variables, kind=block["kind"])
-            if url is None:
-                continue
-            blocks.append(
-                MediaContentBlock(
-                    type="media",
-                    kind=block["kind"],
-                    variable=variable,
-                    url=url,
+            for url in _media_variable_urls(variable, template_variables, kind=block["kind"]):
+                blocks.append(
+                    MediaContentBlock(
+                        type="media",
+                        kind=block["kind"],
+                        variable=variable,
+                        url=url,
+                    )
                 )
-            )
         else:
             blocks.append(block)
     return blocks
