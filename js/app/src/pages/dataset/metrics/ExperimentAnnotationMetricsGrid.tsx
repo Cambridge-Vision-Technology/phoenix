@@ -2,12 +2,12 @@ import { css } from "@emotion/react";
 import type { ReactNode } from "react";
 import { Suspense, useState } from "react";
 
-import { Loading } from "@phoenix/components";
 import {
   AnnotationMetricsChart,
-  type AnnotationMetricsInputPoint,
   AnnotationMetricsViewMenu,
   ChartPanel,
+  ChartPanelSkeleton,
+  ChartSkeleton,
   getDefaultAnnotationMetricsView,
   normalizeAnnotationMetrics,
   type TimeSeriesChartType,
@@ -15,6 +15,7 @@ import {
 import { ErrorBoundary } from "@phoenix/components/exception";
 import { EXPERIMENT_METRICS_EXPERIMENT_COUNT } from "@phoenix/pages/dataset/constants";
 
+import { annotationChart } from "../../../legend/summary.generated.js";
 import {
   ExperimentBaselineDistributionSeparator,
   ExperimentBaselineValueLine,
@@ -32,10 +33,7 @@ import {
   EXPERIMENT_METRICS_CHART_SYNC_ID,
   RECENT_EXPERIMENT_SELECTION,
 } from "./types";
-import {
-  useExperimentAnnotationMetricData,
-  type ExperimentAnnotationMetricDatum,
-} from "./useExperimentAnnotationMetricData";
+import { useExperimentAnnotationMetricData } from "./useExperimentAnnotationMetricData";
 import { useExperimentAnnotationMetricNames } from "./useExperimentAnnotationMetricNames";
 
 const annotationGridCSS = css`
@@ -58,13 +56,40 @@ export function ExperimentAnnotationMetricsGrid({
   return (
     <div css={annotationGridCSS} data-testid="experiment-annotation-grid">
       <ErrorBoundary>
-        <Suspense fallback={<Loading />}>
+        <Suspense fallback={<ExperimentAnnotationMetricsPanelsSkeleton />}>
           <ExperimentAnnotationMetricsPanels datasetId={datasetId} />
         </Suspense>
       </ErrorBoundary>
       {/* Share this grid so trailing half-width charts fill an odd final row. */}
       {children}
     </div>
+  );
+}
+
+/**
+ * The annotation metrics grid while the page loads, holding the trailing
+ * charts' panels as well as the annotations'.
+ */
+export function ExperimentAnnotationMetricsGridSkeleton() {
+  return (
+    <div css={annotationGridCSS}>
+      <ExperimentAnnotationMetricsPanelsSkeleton />
+      <ChartPanelSkeleton />
+      <ChartPanelSkeleton />
+    </div>
+  );
+}
+
+/**
+ * One row of panel skeletons while the annotation names load; how many panels
+ * follow is not known until they arrive.
+ */
+function ExperimentAnnotationMetricsPanelsSkeleton() {
+  return (
+    <>
+      <ChartPanelSkeleton />
+      <ChartPanelSkeleton />
+    </>
   );
 }
 
@@ -122,12 +147,15 @@ function useExperimentAnnotationMetricSeries({
   const { experiments, baselineExperiment } = useExperimentAnnotationMetricData(
     { datasetId, annotationName, experimentSelection }
   );
+  const projection = annotationChart({
+    datasetId,
+    annotationName,
+    experiments,
+    baseline: baselineExperiment,
+  });
   const annotationSeries = normalizeAnnotationMetrics({
-    points: experiments.map(toAnnotationMetricsInputPoint),
-    referencePoint:
-      baselineExperiment == null
-        ? undefined
-        : toAnnotationMetricsInputPoint(baselineExperiment),
+    points: projection.points,
+    referencePoint: projection.referencePoint ?? undefined,
   });
 
   return {
@@ -139,6 +167,7 @@ function useExperimentAnnotationMetricSeries({
     },
     baselineSequenceNumber: baselineExperiment?.sequenceNumber,
     experiments,
+    projection,
   };
 }
 
@@ -161,7 +190,7 @@ export function ExperimentAnnotationMetricPanel({
       <Suspense
         fallback={
           <ChartPanel title={annotationName} fillHeight={fillHeight}>
-            <Loading />
+            <ChartSkeleton />
           </ChartPanel>
         }
       >
@@ -187,7 +216,7 @@ function ExperimentAnnotationMetricPanelContent({
   experimentSelection: ExperimentSelection;
   fillHeight: boolean;
 }) {
-  const { series, baselineSequenceNumber, experiments } =
+  const { series, baselineSequenceNumber, experiments, projection } =
     useExperimentAnnotationMetricSeries({
       datasetId,
       annotationName,
@@ -200,14 +229,17 @@ function ExperimentAnnotationMetricPanelContent({
   );
   // A refetch can change the visible annotation shape while preserving this
   // keyed panel, so fall back when its previous view is no longer available.
-  const activeView = series.views.includes(view)
-    ? view
-    : getDefaultAnnotationMetricsView(series);
+  const activeView = projection.pooled
+    ? "scores"
+    : series.views.includes(view)
+      ? view
+      : getDefaultAnnotationMetricsView(series);
   const { reference } = series;
   const showViewToggle = series.views.length > 1;
   return (
     <ChartPanel
       title={series.name}
+      subtitle={projection.description ?? undefined}
       fillHeight={fillHeight}
       actions={
         showViewToggle ? (
@@ -216,6 +248,8 @@ function ExperimentAnnotationMetricPanelContent({
       }
     >
       <AnnotationMetricsChart
+        scoreLabel={projection.scoreLabel}
+        scoreDomain={projection.domain ?? undefined}
         series={series}
         view={activeView}
         xAxisProps={{
@@ -234,6 +268,7 @@ function ExperimentAnnotationMetricPanelContent({
         syncId={EXPERIMENT_METRICS_CHART_SYNC_ID}
         chartType={CHART_TYPE_BY_SELECTION_TYPE[experimentSelection.type]}
         emptyStateMessage={
+          projection.emptyMessage ??
           EMPTY_STATE_MESSAGE_BY_SELECTION_TYPE[experimentSelection.type]
         }
         additionalLegendItems={getExperimentBaselineLegendItems({
@@ -268,22 +303,4 @@ function ExperimentAnnotationMetricPanelContent({
       />
     </ChartPanel>
   );
-}
-
-function toAnnotationMetricsInputPoint(
-  experiment: ExperimentAnnotationMetricDatum
-): AnnotationMetricsInputPoint {
-  return {
-    x: experiment.sequenceNumber,
-    metadata: {
-      experimentName: experiment.name,
-      experimentId: experiment.id,
-      isBaseline: experiment.isBaseline,
-    },
-    summaries: experiment.annotationSummaries.map((summary) => ({
-      name: summary.annotationName,
-      meanScore: summary.meanScore,
-      labelFractions: summary.labelFractions,
-    })),
-  };
 }

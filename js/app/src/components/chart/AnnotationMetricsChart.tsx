@@ -71,11 +71,11 @@ function AnnotationMetricsTooltip({
   active,
   payload,
   renderHeader,
-  getMeanScoreOptimization,
+  getMeanScoreOptimizationValue,
   chartType,
 }: TooltipContentProps & {
   renderHeader: (point: AnnotationMetricsChartPoint) => ReactNode;
-  getMeanScoreOptimization?: (meanScore: number) => boolean | null;
+  getMeanScoreOptimizationValue?: (meanScore: number) => number | null;
   chartType: TimeSeriesChartType;
 }) {
   if (!active || !payload || payload.length === 0) {
@@ -103,9 +103,11 @@ function AnnotationMetricsTooltip({
             }
             name={String(entry.name)}
             value={
-              isMeanScore && getMeanScoreOptimization ? (
+              isMeanScore && getMeanScoreOptimizationValue ? (
                 <AnnotationScoreText
-                  positiveOptimization={getMeanScoreOptimization(numericValue)}
+                  optimizationValue={getMeanScoreOptimizationValue(
+                    numericValue
+                  )}
                 >
                   {formattedValue}
                 </AnnotationScoreText>
@@ -121,13 +123,15 @@ function AnnotationMetricsTooltip({
 }
 
 type AnnotationMetricsChartProps = {
+  scoreLabel?: string;
+  scoreDomain?: YAxisProps["domain"];
   series: AnnotationMetricsSeries;
   view: AnnotationMetricsView;
   xAxisProps: XAxisProps;
   yAxisProps: YAxisProps;
   syncId: string;
   renderTooltipHeader: (point: AnnotationMetricsChartPoint) => ReactNode;
-  getMeanScoreOptimization?: (meanScore: number) => boolean | null;
+  getMeanScoreOptimizationValue?: (meanScore: number) => number | null;
   chartProps?: ComponentProps<typeof ComposedChart>;
   additionalLegendItems?: ReadonlyArray<LegendPayload>;
   emptyStateMessage?: string;
@@ -156,7 +160,8 @@ export function AnnotationMetricsChart(props: AnnotationMetricsChartProps) {
 function getAnnotationChartState({
   series,
   view,
-}: Pick<AnnotationMetricsChartProps, "series" | "view">) {
+  scoreDomain,
+}: Pick<AnnotationMetricsChartProps, "series" | "view" | "scoreDomain">) {
   const { data, reference } = series;
   const isScoreView = view === "scores";
   const scoreValues = [...data, reference].flatMap((point) =>
@@ -181,7 +186,7 @@ function getAnnotationChartState({
       }));
   return {
     chartData,
-    domain,
+    domain: scoreDomain ?? domain,
     hasOtherValues: chartData.some(
       (point) => "otherFraction" in point && point.otherFraction != null
     ),
@@ -191,13 +196,15 @@ function getAnnotationChartState({
 }
 
 function AnnotationMetricsChartContent({
+  scoreLabel = "mean score",
+  scoreDomain,
   series,
   view,
   xAxisProps,
   yAxisProps,
   syncId,
   renderTooltipHeader,
-  getMeanScoreOptimization,
+  getMeanScoreOptimizationValue,
   chartProps,
   additionalLegendItems,
   renderReference,
@@ -216,7 +223,7 @@ function AnnotationMetricsChartContent({
     hasOtherValues,
     isReferencePrepended,
     isScoreView,
-  } = getAnnotationChartState({ series, view });
+  } = getAnnotationChartState({ series, view, scoreDomain });
   const isScoreLine = isScoreView && chartType === "lineTimeSeries";
 
   return (
@@ -254,7 +261,7 @@ function AnnotationMetricsChartContent({
               <AnnotationMetricsTooltip
                 {...props}
                 renderHeader={renderTooltipHeader}
-                getMeanScoreOptimization={getMeanScoreOptimization}
+                getMeanScoreOptimizationValue={getMeanScoreOptimizationValue}
                 chartType={chartType}
               />
             )}
@@ -266,7 +273,7 @@ function AnnotationMetricsChartContent({
           {isScoreView && !isScoreLine && (
             <Bar
               dataKey={MEAN_SCORE_DATA_KEY}
-              name="mean score"
+              name={scoreLabel}
               fill={getWordColor({ word: series.name, theme })}
               radius={[2, 2, 0, 0]}
               animationDuration={COMPACT_CHART_ANIMATION_DURATION_MS}
@@ -277,7 +284,7 @@ function AnnotationMetricsChartContent({
             <Line
               type="monotone"
               dataKey={MEAN_SCORE_DATA_KEY}
-              name="mean score"
+              name={scoreLabel}
               stroke={getWordColor({ word: series.name, theme })}
               strokeWidth={2}
               dot={{ r: 3 }}

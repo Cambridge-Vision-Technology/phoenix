@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<5f153ba0ca875fe2d863acbb7e82aade>>
+ * @generated SignedSource<<d09dd0205fbaecd6e34a0a90a1c9cd8a>>
  * @lightSyntaxTransform
  */
 
@@ -37,7 +37,9 @@ export type useExperimentMetricsData_experiment$data = {
     };
   };
   readonly errorRate: number | null;
+  readonly expectedRunCount: number;
   readonly id: string;
+  readonly metadata: any;
   readonly name: string;
   readonly runCount: number;
   readonly sequenceNumber: number;
@@ -53,6 +55,6 @@ const node: ReaderInlineDataFragment = {
   "name": "useExperimentMetricsData_experiment"
 };
 
-(node as any).hash = "543772266013a78d6713af5de58bd26b";
+(node as any).hash = "e6c77181987e4d1b6839618f4f91783a";
 
 export default node;

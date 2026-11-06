@@ -2,6 +2,7 @@ import { Flex, Text, View } from "@phoenix/components";
 import { AnnotationColorSwatch } from "@phoenix/components/annotation/AnnotationColorSwatch";
 import { JSONText } from "@phoenix/components/code/JSONText";
 import { Truncate } from "@phoenix/components/core/utility/Truncate";
+import { DynamicContent } from "@phoenix/components/DynamicContent";
 import { floatFormatter } from "@phoenix/utils/numberFormatUtils";
 
 import { AnnotationScoreText } from "./AnnotationScoreText";
@@ -62,7 +63,7 @@ export function AnnotationDetailsContent({
                 explanation
               </Text>
               <View maxHeight="300px" overflow="auto">
-                <Text color="inherit">{annotation.explanation}</Text>
+                <DynamicContent value={annotation.explanation} />
               </View>
             </Flex>
           </View>

@@ -24,6 +24,7 @@ concurrency:
 jobs:
   # Single deploy job since we're just deploying
   deploy:
+    if: github.repository == 'Arize-ai/phoenix'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -38,13 +39,13 @@ jobs:
       - name: setup node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
       - name: Setup PNPM
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
         with:
           package_json_file: js/package.json
       - name: setup pnpm config
-        run: pnpm config set store-dir $PNPM_CACHE_FOLDER
+        run: pnpm config set store-dir "$PNPM_CACHE_FOLDER"
       - name: Install Dependencies
         working-directory: ./js
         run: pnpm install --frozen-lockfile -r

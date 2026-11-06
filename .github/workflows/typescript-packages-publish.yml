@@ -13,6 +13,7 @@ env:
   PNPM_CACHE_FOLDER: .pnpm-store
 jobs:
   version:
+    if: github.repository == 'Arize-ai/phoenix'
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
@@ -24,7 +25,7 @@ jobs:
       - name: setup node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org/
           scope: "@arizeai"
         env:
@@ -34,7 +35,7 @@ jobs:
         with:
           package_json_file: js/package.json
       - name: setup pnpm config
-        run: pnpm config set store-dir $PNPM_CACHE_FOLDER
+        run: pnpm config set store-dir "$PNPM_CACHE_FOLDER"
       - name: Install Dependencies
         working-directory: ./js
         run: pnpm install --frozen-lockfile

@@ -1,5 +1,5 @@
 /**
- * @generated SignedSource<<3248f1e5706057c67402d4fd56c78365>>
+ * @generated SignedSource<<7983746948de3f38f1b3199984eb5633>>
  * @lightSyntaxTransform
  */
 
@@ -93,17 +93,31 @@ v7 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "averageRunLatencyMs",
+  "name": "expectedRunCount",
   "storageKey": null
 },
 v8 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
+  "name": "metadata",
+  "storageKey": null
+},
+v9 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "averageRunLatencyMs",
+  "storageKey": null
+},
+v10 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
   "name": "errorRate",
   "storageKey": null
 },
-v9 = [
+v11 = [
   {
     "alias": null,
     "args": null,
@@ -119,52 +133,52 @@ v9 = [
     "storageKey": null
   }
 ],
-v10 = {
+v12 = {
   "alias": null,
   "args": null,
   "concreteType": "CostBreakdown",
   "kind": "LinkedField",
   "name": "total",
   "plural": false,
-  "selections": (v9/*:: as any*/),
-  "storageKey": null
-},
-v11 = {
-  "alias": null,
-  "args": null,
-  "kind": "ScalarField",
-  "name": "meanScore",
-  "storageKey": null
-},
-v12 = {
-  "alias": null,
-  "args": null,
-  "kind": "ScalarField",
-  "name": "name",
+  "selections": (v11/*:: as any*/),
   "storageKey": null
 },
 v13 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "optimizationDirection",
+  "name": "meanScore",
   "storageKey": null
 },
 v14 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
-  "name": "lowerBound",
+  "name": "name",
   "storageKey": null
 },
 v15 = {
   "alias": null,
   "args": null,
   "kind": "ScalarField",
+  "name": "optimizationDirection",
+  "storageKey": null
+},
+v16 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
+  "name": "lowerBound",
+  "storageKey": null
+},
+v17 = {
+  "alias": null,
+  "args": null,
+  "kind": "ScalarField",
   "name": "upperBound",
   "storageKey": null
 },
-v16 = [
+v18 = [
   (v4/*:: as any*/)
 ];
 return {
@@ -251,6 +265,8 @@ return {
                   (v6/*:: as any*/),
                   (v7/*:: as any*/),
                   (v8/*:: as any*/),
+                  (v9/*:: as any*/),
+                  (v10/*:: as any*/),
                   {
                     "alias": null,
                     "args": null,
@@ -259,7 +275,7 @@ return {
                     "name": "costSummary",
                     "plural": false,
                     "selections": [
-                      (v10/*:: as any*/)
+                      (v12/*:: as any*/)
                     ],
                     "storageKey": null
                   },
@@ -272,7 +288,7 @@ return {
                     "plural": true,
                     "selections": [
                       (v5/*:: as any*/),
-                      (v11/*:: as any*/)
+                      (v13/*:: as any*/)
                     ],
                     "storageKey": null
                   }
@@ -309,7 +325,7 @@ return {
                         "name": "node",
                         "plural": false,
                         "selections": [
-                          (v12/*:: as any*/),
+                          (v14/*:: as any*/),
                           {
                             "alias": null,
                             "args": null,
@@ -322,8 +338,8 @@ return {
                               {
                                 "kind": "InlineFragment",
                                 "selections": [
-                                  (v12/*:: as any*/),
-                                  (v13/*:: as any*/),
+                                  (v14/*:: as any*/),
+                                  (v15/*:: as any*/),
                                   {
                                     "alias": null,
                                     "args": null,
@@ -356,10 +372,10 @@ return {
                               {
                                 "kind": "InlineFragment",
                                 "selections": [
-                                  (v12/*:: as any*/),
-                                  (v13/*:: as any*/),
                                   (v14/*:: as any*/),
-                                  (v15/*:: as any*/)
+                                  (v15/*:: as any*/),
+                                  (v16/*:: as any*/),
+                                  (v17/*:: as any*/)
                                 ],
                                 "type": "ContinuousAnnotationConfig",
                                 "abstractKey": null
@@ -367,8 +383,8 @@ return {
                               {
                                 "kind": "InlineFragment",
                                 "selections": [
-                                  (v12/*:: as any*/),
-                                  (v13/*:: as any*/),
+                                  (v14/*:: as any*/),
+                                  (v15/*:: as any*/),
                                   {
                                     "alias": null,
                                     "args": null,
@@ -376,15 +392,15 @@ return {
                                     "name": "threshold",
                                     "storageKey": null
                                   },
-                                  (v14/*:: as any*/),
-                                  (v15/*:: as any*/)
+                                  (v16/*:: as any*/),
+                                  (v17/*:: as any*/)
                                 ],
                                 "type": "FreeformAnnotationConfig",
                                 "abstractKey": null
                               },
                               {
                                 "kind": "InlineFragment",
-                                "selections": (v16/*:: as any*/),
+                                "selections": (v18/*:: as any*/),
                                 "type": "Node",
                                 "abstractKey": "__isNode"
                               }
@@ -426,7 +442,7 @@ return {
                         "plural": false,
                         "selections": [
                           (v4/*:: as any*/),
-                          (v12/*:: as any*/),
+                          (v14/*:: as any*/),
                           {
                             "alias": null,
                             "args": null,
@@ -455,22 +471,10 @@ return {
                             "name": "createdAt",
                             "storageKey": null
                           },
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "metadata",
-                            "storageKey": null
-                          },
                           (v8/*:: as any*/),
+                          (v10/*:: as any*/),
                           (v6/*:: as any*/),
-                          {
-                            "alias": null,
-                            "args": null,
-                            "kind": "ScalarField",
-                            "name": "expectedRunCount",
-                            "storageKey": null
-                          },
+                          (v7/*:: as any*/),
                           {
                             "alias": null,
                             "args": null,
@@ -478,7 +482,7 @@ return {
                             "name": "repetitions",
                             "storageKey": null
                           },
-                          (v7/*:: as any*/),
+                          (v9/*:: as any*/),
                           {
                             "alias": null,
                             "args": null,
@@ -486,7 +490,7 @@ return {
                             "kind": "LinkedField",
                             "name": "project",
                             "plural": false,
-                            "selections": (v16/*:: as any*/),
+                            "selections": (v18/*:: as any*/),
                             "storageKey": null
                           },
                           {
@@ -514,7 +518,7 @@ return {
                                     "plural": false,
                                     "selections": [
                                       (v4/*:: as any*/),
-                                      (v12/*:: as any*/),
+                                      (v14/*:: as any*/),
                                       {
                                         "alias": null,
                                         "args": null,
@@ -539,7 +543,7 @@ return {
                             "name": "costSummary",
                             "plural": false,
                             "selections": [
-                              (v10/*:: as any*/),
+                              (v12/*:: as any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -547,7 +551,7 @@ return {
                                 "kind": "LinkedField",
                                 "name": "prompt",
                                 "plural": false,
-                                "selections": (v9/*:: as any*/),
+                                "selections": (v11/*:: as any*/),
                                 "storageKey": null
                               },
                               {
@@ -557,7 +561,7 @@ return {
                                 "kind": "LinkedField",
                                 "name": "completion",
                                 "plural": false,
-                                "selections": (v9/*:: as any*/),
+                                "selections": (v11/*:: as any*/),
                                 "storageKey": null
                               }
                             ],
@@ -572,7 +576,7 @@ return {
                             "plural": true,
                             "selections": [
                               (v5/*:: as any*/),
-                              (v11/*:: as any*/),
+                              (v13/*:: as any*/),
                               {
                                 "alias": null,
                                 "args": null,
@@ -708,16 +712,16 @@ return {
     ]
   },
   "params": {
-    "cacheID": "50990fcdfa812a9a6865abab772a6eca",
+    "cacheID": "c2c3b93f144661930c4fbafb917874d2",
     "id": null,
     "metadata": {},
     "name": "ExperimentsTableQuery",
     "operationKind": "query",
-    "text": "query ExperimentsTableQuery(\n  $after: String = null\n  $first: Int = 100\n  $id: ID!\n) {\n  node(id: $id) {\n    __typename\n    ...ExperimentsTableFragment_2HEEH6\n    id\n  }\n}\n\nfragment ExperimentsTableFragment_2HEEH6 on Dataset {\n  id\n  experimentAnnotationSummaries {\n    annotationName\n    minScore\n    maxScore\n  }\n  baselineExperiment {\n    id\n    runCount\n    averageRunLatencyMs\n    errorRate\n    costSummary {\n      total {\n        tokens\n        cost\n      }\n    }\n    annotationSummaries {\n      annotationName\n      meanScore\n    }\n  }\n  datasetEvaluators(first: 100) {\n    edges {\n      node {\n        name\n        outputConfigs {\n          __typename\n          ... on CategoricalAnnotationConfig {\n            name\n            optimizationDirection\n            values {\n              label\n              score\n            }\n          }\n          ... on ContinuousAnnotationConfig {\n            name\n            optimizationDirection\n            lowerBound\n            upperBound\n          }\n          ... on FreeformAnnotationConfig {\n            name\n            optimizationDirection\n            threshold\n            lowerBound\n            upperBound\n          }\n          ... on Node {\n            __isNode: __typename\n            id\n          }\n        }\n        id\n      }\n    }\n  }\n  experiments(first: $first, after: $after) {\n    edges {\n      experiment: node {\n        id\n        name\n        sequenceNumber\n        description\n        isBaseline\n        createdAt\n        metadata\n        errorRate\n        runCount\n        expectedRunCount\n        repetitions\n        averageRunLatencyMs\n        project {\n          id\n        }\n        datasetSplits {\n          edges {\n            node {\n              id\n              name\n              color\n            }\n          }\n        }\n        costSummary {\n          total {\n            tokens\n            cost\n          }\n          prompt {\n            tokens\n            cost\n          }\n          completion {\n            tokens\n            cost\n          }\n        }\n        annotationSummaries {\n          annotationName\n          meanScore\n          count\n          errorCount\n        }\n        user {\n          username\n          profilePictureUrl\n          id\n        }\n        job {\n          status\n          id\n        }\n      }\n      cursor\n      node {\n        __typename\n        id\n      }\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n}\n"
+    "text": "query ExperimentsTableQuery(\n  $after: String = null\n  $first: Int = 100\n  $id: ID!\n) {\n  node(id: $id) {\n    __typename\n    ...ExperimentsTableFragment_2HEEH6\n    id\n  }\n}\n\nfragment ExperimentsTableFragment_2HEEH6 on Dataset {\n  id\n  experimentAnnotationSummaries {\n    annotationName\n    minScore\n    maxScore\n  }\n  baselineExperiment {\n    id\n    runCount\n    expectedRunCount\n    metadata\n    averageRunLatencyMs\n    errorRate\n    costSummary {\n      total {\n        tokens\n        cost\n      }\n    }\n    annotationSummaries {\n      annotationName\n      meanScore\n    }\n  }\n  datasetEvaluators(first: 100) {\n    edges {\n      node {\n        name\n        outputConfigs {\n          __typename\n          ... on CategoricalAnnotationConfig {\n            name\n            optimizationDirection\n            values {\n              label\n              score\n            }\n          }\n          ... on ContinuousAnnotationConfig {\n            name\n            optimizationDirection\n            lowerBound\n            upperBound\n          }\n          ... on FreeformAnnotationConfig {\n            name\n            optimizationDirection\n            threshold\n            lowerBound\n            upperBound\n          }\n          ... on Node {\n            __isNode: __typename\n            id\n          }\n        }\n        id\n      }\n    }\n  }\n  experiments(first: $first, after: $after) {\n    edges {\n      experiment: node {\n        id\n        name\n        sequenceNumber\n        description\n        isBaseline\n        createdAt\n        metadata\n        errorRate\n        runCount\n        expectedRunCount\n        repetitions\n        averageRunLatencyMs\n        project {\n          id\n        }\n        datasetSplits {\n          edges {\n            node {\n              id\n              name\n              color\n            }\n          }\n        }\n        costSummary {\n          total {\n            tokens\n            cost\n          }\n          prompt {\n            tokens\n            cost\n          }\n          completion {\n            tokens\n            cost\n          }\n        }\n        annotationSummaries {\n          annotationName\n          meanScore\n          count\n          errorCount\n        }\n        user {\n          username\n          profilePictureUrl\n          id\n        }\n        job {\n          status\n          id\n        }\n      }\n      cursor\n      node {\n        __typename\n        id\n      }\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n}\n"
   }
 };
 })();
 
-(node as any).hash = "1f43803ba5c929080ce7453a214b11cf";
+(node as any).hash = "52b8c7514ec51a21ecf318377ccf9927";
 
 export default node;

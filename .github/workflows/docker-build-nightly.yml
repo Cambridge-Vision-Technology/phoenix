@@ -4,7 +4,7 @@ permissions:
 on:
   push:
     branches:
-      - main
+      # Company main publishes only through the CVT workflow, never Docker Hub.
       - version-*
 
 # One push supersedes the previous one on the same branch: the older run is

@@ -26,6 +26,7 @@ import { useTheme } from "@phoenix/contexts";
 import { getWordColor } from "@phoenix/utils/colorUtils";
 import { formatFloat } from "@phoenix/utils/numberFormatUtils";
 
+import { combinedChart } from "../../../legend/summary.generated.js";
 import type { ExperimentMetricsTooltipDatum } from "./ExperimentMetricsTooltipContent";
 import { ExperimentMetricsTooltipHeader } from "./ExperimentMetricsTooltipHeader";
 import { useExperimentChartDatum } from "./experimentSelection";
@@ -76,7 +77,7 @@ function TooltipContent({
 }
 
 /**
- * Mean annotation scores, with one line per annotation, per experiment.
+ * Versioned pooled headlines and detailed native case means per experiment.
  */
 export function ExperimentAnnotationScoresChart({
   datasetId,
@@ -91,50 +92,20 @@ export function ExperimentAnnotationScoresChart({
     useExperimentChartDatum(experimentSelection);
   const isComparedSelection = experimentSelection.type === "compared";
 
-  const scoreKeySet = new Set<string>();
-  const chartData = experiments.map((experiment) => {
-    const scores: Record<string, number | undefined> = {};
-    for (const summary of experiment.annotationSummaries) {
-      scoreKeySet.add(summary.annotationName);
-      scores[summary.annotationName] = summary.meanScore ?? undefined;
-    }
-    return {
-      ...scores,
-      ...toExperimentChartDatum(experiment),
-    };
-  });
-  const scoreKeys = Array.from(scoreKeySet);
-
   const { hiddenDataKeys, isDataKeyHidden, toggleDataKey } =
     useInteractiveLegend();
-
-  // Snap the score axis to [0, 1] when every visible score fits in it, so
-  // normalized scores read consistently across experiments
-  const visibleScoreKeys = scoreKeys.filter(
-    (scoreKey) => !hiddenDataKeys.has(scoreKey)
-  );
-  let minScore = Infinity;
-  let maxScore = -Infinity;
-  for (const dataPoint of chartData) {
-    for (const scoreKey of visibleScoreKeys) {
-      const scoreValue = dataPoint[scoreKey as keyof typeof dataPoint];
-      if (typeof scoreValue === "number") {
-        if (scoreValue < minScore) minScore = scoreValue;
-        if (scoreValue > maxScore) maxScore = scoreValue;
-      }
-    }
-  }
-  const yDomain =
-    minScore >= 0 && maxScore <= 1 && maxScore !== -Infinity
-      ? ([0, 1] as [number, number])
-      : undefined;
-
-  const hasData = chartData.some((dataPoint) =>
-    scoreKeys.some(
-      (scoreKey) =>
-        typeof dataPoint[scoreKey as keyof typeof dataPoint] === "number"
-    )
-  );
+  const projection = combinedChart({
+    datasetId,
+    experiments,
+    hiddenDataKeys: Array.from(hiddenDataKeys, String),
+  });
+  const chartData = experiments.map((experiment, index) => ({
+    ...projection.rows[index].scores,
+    ...toExperimentChartDatum(experiment),
+  }));
+  const scoreKeys = projection.keys;
+  const yDomain = projection.domain ?? undefined;
+  const hasData = projection.hasData;
 
   return (
     <ChartEmptyStateOverlay

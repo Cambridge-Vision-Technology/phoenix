@@ -2,6 +2,7 @@ import json
 import re
 from datetime import datetime
 from typing import Any, Awaitable, Callable, Mapping, Optional, cast
+from unittest.mock import AsyncMock, patch
 
 import anyio
 import pytest
@@ -42,7 +43,10 @@ from phoenix.server.api.input_types.PromptVersionInput import (
     PromptMessageInput,
     TextContentValueInput,
 )
-from phoenix.server.api.subscriptions import _stream_single_chat_completion
+from phoenix.server.api.subscriptions import (
+    _create_task_with_timeout,
+    _stream_single_chat_completion,
+)
 from phoenix.server.api.types.ChatCompletionSubscriptionPayload import (
     ChatCompletionSubscriptionError,
     ChatCompletionSubscriptionExperiment,
@@ -181,6 +185,49 @@ class TestChatCompletionSubscription:
         propagatedStatusCode
       }
     """
+
+    async def test_chat_completion_uses_configured_timeout(
+        self,
+        gql_client: AsyncGraphQLClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setenv("PHOENIX_PLAYGROUND_TIMEOUT_SECONDS", "900")
+
+        async def stream(**_: Any) -> Any:
+            yield TextChunk(content="first")
+            yield TextChunk(content="second")
+
+        with (
+            patch("phoenix.server.api.subscriptions.get_playground_client", new_callable=AsyncMock),
+            patch("phoenix.server.api.subscriptions._stream_single_chat_completion", stream),
+            patch(
+                "phoenix.server.api.subscriptions._create_task_with_timeout",
+                wraps=_create_task_with_timeout,
+            ) as create_task,
+        ):
+            payloads = [
+                payload
+                async for payload in gql_client.subscription(
+                    query=self.QUERY,
+                    variables={
+                        "input": {
+                            "promptVersion": {
+                                "templateFormat": "NONE",
+                                "template": {"messages": []},
+                                "modelProvider": "OPENAI",
+                                "modelName": "gpt-4",
+                                "invocationParameters": {"openai": {}},
+                            },
+                            "repetitions": 1,
+                        }
+                    },
+                    operation_name="ChatCompletionSubscription",
+                )
+            ]
+
+        assert [payload["chatCompletion"]["content"] for payload in payloads] == ["first", "second"]
+        assert create_task.call_count == 3
+        assert all(call.kwargs["timeout_in_seconds"] == 900 for call in create_task.call_args_list)
 
     async def test_invocation_parameter_validation_error_is_emitted(
         self,

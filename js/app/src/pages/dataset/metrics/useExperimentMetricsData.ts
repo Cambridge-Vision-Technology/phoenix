@@ -16,6 +16,8 @@ const experimentMetricsExperimentFragment = graphql`
     averageRunLatencyMs
     errorRate
     runCount
+    expectedRunCount
+    metadata
     annotationSummaries {
       annotationName
       meanScore
@@ -85,6 +87,11 @@ export type ExperimentMetricsDatum = {
   name: string;
   sequenceNumber: number;
   isBaseline: boolean;
+  pooledSource?: {
+    metadata: unknown;
+    runCount: number;
+    expectedRunCount: number;
+  };
   averageRunLatencyMs: number | null;
   errorRate: number | null;
   runCount: number;
@@ -144,6 +151,11 @@ function readExperimentMetricsDatum({
     name: data.name,
     sequenceNumber: data.sequenceNumber,
     isBaseline: data.id === baselineExperimentId,
+    pooledSource: {
+      metadata: data.metadata,
+      runCount: data.runCount,
+      expectedRunCount: data.expectedRunCount,
+    },
     averageRunLatencyMs: data.averageRunLatencyMs,
     errorRate: data.errorRate,
     runCount: data.runCount,
@@ -218,12 +230,11 @@ export function useExperimentMetricsData({
         };
   const baselineExperimentId = baselineExperiment?.id;
   const experiments = (data.dataset.metricsExperiments?.edges ?? [])
-    .map(
-      ({ experiment }): ExperimentMetricsDatum =>
-        readExperimentMetricsDatum({
-          experiment,
-          baselineExperimentId,
-        })
+    .map(({ experiment }): ExperimentMetricsDatum =>
+      readExperimentMetricsDatum({
+        experiment,
+        baselineExperimentId,
+      })
     )
     .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
 
