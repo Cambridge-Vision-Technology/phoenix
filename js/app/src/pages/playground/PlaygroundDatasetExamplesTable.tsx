@@ -101,6 +101,7 @@ import {
   InstanceVariablesProvider,
   useInstanceVariables,
 } from "./InstanceVariablesContext";
+import { ExampleResponseFormatNotice } from "./media/ExampleResponseFormatNotice";
 import {
   type ExperimentRunAnnotation,
   type ExperimentRunCost,
@@ -1323,18 +1324,21 @@ export function PlaygroundDatasetExamplesTable({
         header: "input",
         accessorKey: "input",
         cell: ({ row }) => (
-          <ExperimentInputCell
-            exampleId={row.original.id}
-            externalId={row.original.externalId}
-            value={row.original.input}
-            height={CELL_PRIMARY_CONTENT_HEIGHT + annotationListHeight}
-            onExpand={() => {
-              setSearchParams((prev) => {
-                prev.set("exampleId", row.original.id);
-                return prev;
-              });
-            }}
-          />
+          <>
+            <ExampleResponseFormatNotice metadata={row.original.metadata} />
+            <ExperimentInputCell
+              exampleId={row.original.id}
+              externalId={row.original.externalId}
+              value={row.original.input}
+              height={CELL_PRIMARY_CONTENT_HEIGHT + annotationListHeight}
+              onExpand={() => {
+                setSearchParams((prev) => {
+                  prev.set("exampleId", row.original.id);
+                  return prev;
+                });
+              }}
+            />
+          </>
         ),
         size: 200,
       },

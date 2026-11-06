@@ -161,6 +161,7 @@ from phoenix.server.types import DaemonTask, DbSessionFactory
 from phoenix.utilities.template_formatters import TemplateFormatterError
 
 from ..api.helpers.db_trace_media import offload_db_trace_media
+from ..api.helpers.example_response_format import example_response_format
 
 if TYPE_CHECKING:
     from opentelemetry.context import Context
@@ -551,6 +552,9 @@ class TaskWorkItem(WorkItem):
         format_start_time = datetime.now(timezone.utc)
         try:
             messages = await self._build_messages()
+            response_format = example_response_format(
+                revision.metadata_, self._prompt_task.response_format
+            )
         except (
             TemplateFormatterError,
             KeyError,
@@ -601,7 +605,7 @@ class TaskWorkItem(WorkItem):
                 async for chunk in self._llm_client.chat_completion_create(
                     messages=messages,
                     tools=self._prompt_task.tools,
-                    response_format=self._prompt_task.response_format,
+                    response_format=response_format,
                     invocation_parameters=self._prompt_task.invocation_parameters,
                     tracer=tracer,
                     otel_context=OtelContext(),
